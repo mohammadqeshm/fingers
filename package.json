@@ -1,0 +1,12 @@
+{
+  "name": "ai-finger-fx-camera",
+  "version": "1.0.0",
+  "description": "Real-time AI Hand & Finger Tracking Camera with Dynamic FX",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["mediapipe", "camera", "hand-tracking", "finger-counter", "real-time-fx"],
+  "author": "",
+  "license": "MIT"
+}

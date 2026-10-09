@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>هوش مصنوعی دوربین هوشمند | تشخیص انگشتان و افکت‌های آنی</title>
+  <meta name="description" content="سیستم پردازش بلادرنگ تصویر و شمارش انگشتان دست با هوش مصنوعی و اعمال آنی افکت‌های خیره‌کننده سینمایی">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Vazirmatn:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- MediaPipe dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-icon">
+          <span class="pulse-ring"></span>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>AI Finger FX Vision</h1>
+          <span class="subtext">شناسایی هوشمند حرکات دست و افکت‌های آنی</span>
+        </div>
+      </div>
+
+      <!-- Quick Metrics HUD -->
+      <div class="metrics-hud">
+        <div class="metric-card">
+          <span class="metric-label">FPS</span>
+          <span class="metric-val" id="fpsDisplay">--</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">تعداد انگشت</span>
+          <span class="metric-val highlight" id="fingerCountDisplay">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">دقت AI</span>
+          <span class="metric-val" id="confidenceDisplay">--%</span>
+        </div>
+        <div class="status-badge" id="aiStatusBadge">
+          <span class="status-dot"></span>
+          <span id="aiStatusText">آماده‌سازی دوربین...</span>
+        </div>
+      </div>
+
+      <!-- Header Action Controls -->
+      <div class="header-actions">
+        <button id="toggleAudioBtn" class="glass-btn icon-btn" title="صدا / افکت صوتی">
+          <svg id="audioIconOn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="audioIconOff" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+
+        <button id="toggleSkeletonBtn" class="glass-btn" title="نمایش اسکلت دست">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M3 12h3m12 0h3M12 3v3m0 12v3"></path>
+          </svg>
+          <span>اسکلت دست</span>
+        </button>
+
+        <button id="flipCameraBtn" class="glass-btn icon-btn" title="آینه کردن دوربین (Mirror)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+        </button>
+
+        <button id="fullscreenBtn" class="glass-btn icon-btn" title="تمام صفحه دوربین">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
+
+        <button id="themeToggleBtn" class="glass-btn icon-btn" title="تغییر حالت نمایش">
+          <svg id="themeIconLight" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+          <svg id="themeIconDark" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Viewport Layout -->
+    <main class="main-viewport">
+      
+      <!-- Video & Canvas Area -->
+      <div class="stage-container" id="stageContainer">
+        <!-- Raw video element (hidden or used as source) -->
+        <video id="webcamVideo" playsinline autoplay muted></video>
+        
+        <!-- Processing canvas for video + effects -->
+        <canvas id="outputCanvas"></canvas>
+        
+        <!-- HUD Overlays (Dynamic Target Reticles, Floating Badges, VHS info) -->
+        <div class="hud-overlay" id="hudOverlay">
+          
+          <!-- Live Active Effect Banner -->
+          <div class="active-effect-banner" id="effectBanner">
+            <div class="banner-glow"></div>
+            <div class="banner-content">
+              <span class="finger-pill" id="fingerBadge">0 انگشت</span>
+              <div class="effect-info">
+                <span class="effect-title" id="effectNameTitle">حالت خلأ و ماتریس (Matrix Void)</span>
+                <span class="effect-sub" id="effectSubTitle">دست خود را ببندید (مشت)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hand Gesture Radar / Detection Indicator -->
+          <div class="gesture-indicator" id="gestureIndicator">
+            <div class="radar-scan"></div>
+            <div class="finger-dots" id="fingerDots">
+              <span class="f-dot" id="dot-thumb" title="شست"></span>
+              <span class="f-dot" id="dot-index" title="اشاره"></span>
+              <span class="f-dot" id="dot-middle" title="وسط"></span>
+              <span class="f-dot" id="dot-ring" title="حلقه"></span>
+              <span class="f-dot" id="dot-pinky" title="کوچک"></span>
+            </div>
+          </div>
+
+          <!-- VHS Specific Overlay (Active in Mode 4) -->
+          <div class="vhs-overlay hidden" id="vhsOverlay">
+            <div class="vhs-rec"><span class="rec-dot"></span> REC</div>
+            <div class="vhs-time" id="vhsTimeDisplay">SP 00:00:00</div>
+            <div class="vhs-tracking">TRACKING [||||||||]</div>
+          </div>
+
+          <!-- Futuristic Crosshairs & Target Ring (Moves to Fingertip) -->
+          <div class="target-pointer hidden" id="targetPointer">
+            <div class="target-cross"></div>
+            <div class="target-data">LOCK: <span id="targetCoord">X:0 Y:0</span></div>
+          </div>
+          
+          <!-- Loading / Camera Request Overlay -->
+          <div class="camera-loader-overlay" id="cameraLoader">
+            <div class="loader-content">
+              <div class="ai-orb">
+                <div class="orb-inner"></div>
+              </div>
+              <h2 id="loaderTitle">در حال راه‌اندازی دوربین و هوش مصنوعی...</h2>
+              <p id="loaderDesc">لطفاً در صورت درخواست مرورگر، دسترسی به وبکم را تأیید فرمایید.</p>
+              <button id="startCamBtn" class="primary-btn glow-btn">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>فعال‌سازی دوربین</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <button id="exitFullscreenBtn" class="exit-fullscreen-btn" title="خروج از تمام صفحه">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+          </svg>
+          <span>خروج</span>
+        </button>
+
+        <!-- Floating Quick Capture Snapshot Button -->
+        <button id="snapshotBtn" class="snapshot-fab" title="ثبت عکس با افکت">
+          <div class="fab-circle">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </div>
+          <span class="fab-label">عکس با افکت</span>
+        </button>
+      </div>
+
+      <!-- Bottom Interactive Effect Rack / Manual Gestures Selector -->
+      <footer class="effect-dock">
+        <div class="dock-header">
+          <div class="dock-title">
+            <span>راهنمای افکت‌های متناظر با تعداد انگشتان:</span>
+            <div class="mode-switch">
+              <button id="modeAutoBtn" class="mode-tab active">حالت خودکار با ژست هوشمند</button>
+              <button id="modeManualBtn" class="mode-tab">حالت دستی</button>
+            </div>
+          </div>
+          <div class="camera-select-wrap">
+            <label for="cameraSelect">انتخاب دوربین:</label>
+            <select id="cameraSelect" class="glass-select"></select>
+          </div>
+        </div>
+
+        <div class="effects-grid">
+          
+          <!-- Card 0 -->
+          <div class="effect-card active" data-fingers="0" id="card-0">
+            <div class="card-badge">۰ انگشت (مشت)</div>
+            <div class="card-preview theme-matrix">
+              <div class="preview-matrix-rain"></div>
+            </div>
+            <div class="card-title">ماتریس و خلأ دیجیتال</div>
+            <div class="card-desc">باران کدهای سایبری و خطوط اسکن نئونی</div>
+          </div>
+
+          <!-- Card 1 -->
+          <div class="effect-card" data-fingers="1" id="card-1">
+            <div class="card-badge">۱ انگشت (اشاره)</div>
+            <div class="card-preview theme-laser">
+              <div class="preview-laser-beam"></div>
+            </div>
+            <div class="card-title">لیزر نئونی سایبرپانک</div>
+            <div class="card-desc">شلیک پرتو لیزر متمرکز و ردگیری لحظه‌ای</div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="effect-card" data-fingers="2" id="card-2">
+            <div class="card-badge">۲ انگشت (علامت صلح)</div>
+            <div class="card-preview theme-hologram">
+              <div class="preview-electric-arc"></div>
+            </div>
+            <div class="card-title">صاعقه و منشور هولوگرام</div>
+            <div class="card-desc">جرقه‌های الکتریکی بین انگشتان و نور منشوری</div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="effect-card" data-fingers="3" id="card-3">
+            <div class="card-badge">۳ انگشت</div>
+            <div class="card-preview theme-fire">
+              <div class="preview-fire-flame"></div>
+            </div>
+            <div class="card-title">آتش شعله‌ور و شراره‌ها</div>
+            <div class="card-desc">زبانه‌های آتشین فعال و پاشش ذرات سوزان</div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="effect-card" data-fingers="4" id="card-4">
+            <div class="card-badge">۴ انگشت</div>
+            <div class="card-preview theme-vhs">
+              <div class="preview-vhs-glitch"></div>
+            </div>
+            <div class="card-title">نوستالژی VHS و سینث‌ویو</div>
+            <div class="card-desc">گلیچ نواری دهه ۸۰، رنگ‌های رترو و افکت CRT</div>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="effect-card" data-fingers="5" id="card-5">
+            <div class="card-badge">۵ انگشت (دست کامل باز)</div>
+            <div class="card-preview theme-galaxy">
+              <div class="preview-galaxy-spiral"></div>
+            </div>
+            <div class="card-title">سوپرنوا و گرداب کیهانی</div>
+            <div class="card-desc">انفجار غبار ستاره‌ای و هاله‌های انرژی کهکشانی</div>
+          </div>
+
+        </div>
+      </footer>
+
+    </main>
+
+    <!-- Snapshot Notification Toast -->
+    <div class="snapshot-toast hidden" id="snapshotToast">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#00f2fe" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span>عکس با بالاترین کیفیت با موفقیت ذخیره شد!</span>
+    </div>
+
+  </div>
+
+  <!-- Main Application Script -->
+  <script src="app.js?v=2"></script>
+</body>
+</html>
