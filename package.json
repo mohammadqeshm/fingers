@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": ["mediapipe", "camera", "hand-tracking", "finger-counter", "real-time-fx"],
-  "author": "",
+  "keywords": ["mediapipe", "camera", "hand-tracking", "finger-counter", "real-time-fx", "computer-vision"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mohammadqeshm/fingers.git"
+  },
+  "author": "mohammadqeshm",
   "license": "MIT"
 }
