@@ -45,8 +45,32 @@
   const modeManualBtn = document.getElementById('modeManualBtn');
   const cameraSelect = document.getElementById('cameraSelect');
   const effectCards = document.querySelectorAll('.effect-card');
+  const faceEffectCards = document.querySelectorAll('.face-effect-card');
   const vhsOverlay = document.getElementById('vhsOverlay');
   const vhsTimeDisplay = document.getElementById('vhsTimeDisplay');
+
+  const switchHandPageBtn = document.getElementById('switchHandPageBtn');
+  const switchFacePageBtn = document.getElementById('switchFacePageBtn');
+  const brandTitle = document.getElementById('brandTitle');
+  const brandSubtext = document.getElementById('brandSubtext');
+  const primaryMetricLabel = document.getElementById('primaryMetricLabel');
+  const skeletonBtnLabel = document.getElementById('skeletonBtnLabel');
+  const gestureIndicator = document.getElementById('gestureIndicator');
+  const faceTelemetryHud = document.getElementById('faceTelemetryHud');
+  const handDockTitle = document.getElementById('handDockTitle');
+  const faceDockTitle = document.getElementById('faceDockTitle');
+  const handEffectsGrid = document.getElementById('handEffectsGrid');
+  const faceEffectsGrid = document.getElementById('faceEffectsGrid');
+  const prevFaceFxBtn = document.getElementById('prevFaceFxBtn');
+  const nextFaceFxBtn = document.getElementById('nextFaceFxBtn');
+  const randomFaceFxBtn = document.getElementById('randomFaceFxBtn');
+
+  const tagEyes = document.getElementById('tag-eyes');
+  const tagEars = document.getElementById('tag-ears');
+  const tagLips = document.getElementById('tag-lips');
+  const tagNose = document.getElementById('tag-nose');
+  const mouthStatText = document.getElementById('mouthStatText');
+  const eyeStatText = document.getElementById('eyeStatText');
   
   const fingerDots = {
     thumb: document.getElementById('dot-thumb'),
@@ -102,16 +126,106 @@
     }
   ];
 
+  // --- 10 Interactive Face FX Configuration ---
+  const FACE_EFFECTS = [
+    {
+      id: 0,
+      badge: 'افکت ۰۱ • چشم و گوش',
+      title: 'ویزور سایبرپانک نئونی (Cyberpunk AR Visor)',
+      sub: 'عینک آینده‌نگرانه روی چشم‌ها، هدفون نئونی روی گوش‌ها و اسکن بیومتریک لب',
+      color: '#00f2fe',
+      glow: '0 0 25px rgba(0, 242, 254, 0.45)'
+    },
+    {
+      id: 1,
+      badge: 'افکت ۰۲ • چشم و ابرو',
+      title: 'چشمان لیزری و صاعقه (Super Saiyan Laser Eyes)',
+      sub: 'شلیک پرتوهای پرقدرت پلاسما از مردمک هر دو چشم همراه با جرقه‌های الکتریکی',
+      color: '#ff2a85',
+      glow: '0 0 25px rgba(255, 42, 133, 0.45)'
+    },
+    {
+      id: 2,
+      badge: 'افکت ۰۳ • پیشانی و گوش‌ها',
+      title: 'تاج سلطنتی و گوشواره جواهر (Royal Crown & Jewels)',
+      sub: 'تاج طلایی جواهرنشان روی پیشانی و گوشواره‌های یاقوت آویزان از لاله گوش‌ها',
+      color: '#ffd700',
+      glow: '0 0 25px rgba(255, 215, 0, 0.45)'
+    },
+    {
+      id: 3,
+      badge: 'افکت ۰۴ • لب و دهان (تعاملی)',
+      title: 'نفس اژدها و دهان آتشین (Dragon Fire Breath)',
+      sub: 'دهان خود را باز کنید تا شعله‌های آتش از لب‌ها به بیرون فوران کند و شاخ‌های اژدها بدرخشند!',
+      color: '#ff5500',
+      glow: '0 0 25px rgba(255, 85, 0, 0.45)'
+    },
+    {
+      id: 4,
+      badge: 'افکت ۰۵ • گوش، بینی و گونه',
+      title: 'ببر نئونی و گوش‌های فانتزی (Neon Cat & Whiskers)',
+      sub: 'گوش‌های گربه‌ای سه‌بعدی، بینی فانتزی روی نوک بینی و سیبیل‌های نئونی روی گونه‌ها',
+      color: '#ff66cc',
+      glow: '0 0 25px rgba(255, 102, 204, 0.45)'
+    },
+    {
+      id: 5,
+      badge: 'افکت ۰۶ • مش ۴۶۸ نقطه‌ای چهره',
+      title: 'ماسک سایبورگ ترمیناتور (Terminator Cyborg HUD)',
+      sub: 'شبکه هندسی تیتانیومی چهره، چشم اسکنر قرمز T-800 و نمایشگر تله‌متری فک و گوش',
+      color: '#ff003c',
+      glow: '0 0 25px rgba(255, 0, 60, 0.45)'
+    },
+    {
+      id: 6,
+      badge: 'افکت ۰۷ • لب، چشم و گونه',
+      title: 'عینک قلبی و بوسه عشق (Heart Pop & Kisses)',
+      sub: 'عینک قلبی روی چشم‌ها، رژ لب درخشان و پرواز قلب‌های شناور هنگام باز کردن لب‌ها',
+      color: '#ff1493',
+      glow: '0 0 25px rgba(255, 20, 147, 0.45)'
+    },
+    {
+      id: 7,
+      badge: 'افکت ۰۸ • گوش‌ها و لب (اکولایزر)',
+      title: 'دی‌جی ست و هدفون استودیویی (Bass Equalizer DJ)',
+      sub: 'هدفون حرفه‌ای متصل به گوش‌ها و اکولایزر نئونی دور سر که با باز شدن لب‌ها می‌رقصد',
+      color: '#00ff88',
+      glow: '0 0 25px rgba(0, 255, 136, 0.45)'
+    },
+    {
+      id: 8,
+      badge: 'افکت ۰۹ • چشم‌ها و پیشانی',
+      title: 'شارینگان و چاکرای انیمه (Anime Sharingan Aura)',
+      sub: 'چشمان شارینگان چرخان روی مردمک‌ها، هدبند نینجا روی پیشانی و خطوط سرعت مانگا',
+      color: '#ff3300',
+      glow: '0 0 25px rgba(255, 51, 0, 0.45)'
+    },
+    {
+      id: 9,
+      badge: 'افکت ۱۰ • کل صورت و کهکشان',
+      title: 'آواتار کیهانی و چشم سوم (Cosmic Astral Avatar)',
+      sub: 'چشم سوم نورانی، اتصال ستاره‌ای بین چشم و گوش و لب، و اشک‌های کهکشانی',
+      color: '#a855f7',
+      glow: '0 0 25px rgba(168, 85, 247, 0.45)'
+    }
+  ];
+
   // --- Application State ---
+  let currentPage = 'hand'; // 'hand' | 'face'
   let isAutoMode = true;
   let activeEffectIndex = 0;
+  let activeFaceEffectIndex = 0;
   let isMirrored = true;
   let showSkeleton = true;
   let isAudioEnabled = true;
   let currentCameraStream = null;
   let mediaPipeHands = null;
+  let mediaPipeFaceMesh = null;
   let isModelReady = false;
+  let isFaceModelReady = false;
   let isAiInferring = false;
+  let latestFaceLandmarks = null;
+  let faceMetrics = { mouthOpenRatio: 0, isMouthOpen: false, leftEyeOpen: true, rightEyeOpen: true, headRoll: 0 };
   
   // Performance and FPS Tracking
   let renderFrames = 0;
@@ -1090,18 +1204,892 @@
     ctx.restore();
   }
 
+  // --- FACE FX ENGINE & LANDMARK DETECTION (Eyes, Ears, Lips, Nose, Forehead) ---
+  const faceFireParticles = [];
+  const faceHearts = [];
+  const faceCosmicTears = [];
+
+  function pt(landmarks, idx, w, h) {
+    const lm = landmarks[idx] || { x: 0.5, y: 0.5, z: 0 };
+    return {
+      x: (isMirrored ? 1 - lm.x : lm.x) * w,
+      y: lm.y * h,
+      z: lm.z || 0
+    };
+  }
+
+  function analyzeFaceLandmarks(landmarks, w, h) {
+    // Key anatomical landmarks in MediaPipe Face Mesh (468 / 478 points)
+    const upperLip = pt(landmarks, 13, w, h);
+    const lowerLip = pt(landmarks, 14, w, h);
+    const mouthLeft = pt(landmarks, 61, w, h);
+    const mouthRight = pt(landmarks, 291, w, h);
+    const forehead = pt(landmarks, 10, w, h);
+    const chin = pt(landmarks, 152, w, h);
+    const leftEar = pt(landmarks, 234, w, h);
+    const rightEar = pt(landmarks, 454, w, h);
+    const leftEyeTop = pt(landmarks, 159, w, h);
+    const leftEyeBot = pt(landmarks, 145, w, h);
+    const rightEyeTop = pt(landmarks, 386, w, h);
+    const rightEyeBot = pt(landmarks, 374, w, h);
+
+    const faceHeight = Math.hypot(chin.x - forehead.x, chin.y - forehead.y) || 100;
+    const faceWidth = Math.hypot(rightEar.x - leftEar.x, rightEar.y - leftEar.y) || 100;
+    const mouthGap = Math.hypot(lowerLip.x - upperLip.x, lowerLip.y - upperLip.y);
+    const mouthOpenRatio = Math.min(1, Math.max(0, mouthGap / (faceHeight * 0.22)));
+    const isMouthOpen = mouthOpenRatio > 0.22;
+
+    const leftEyeGap = Math.hypot(leftEyeBot.x - leftEyeTop.x, leftEyeBot.y - leftEyeTop.y);
+    const rightEyeGap = Math.hypot(rightEyeBot.x - rightEyeTop.x, rightEyeBot.y - rightEyeTop.y);
+    const leftEyeOpen = leftEyeGap / faceHeight > 0.018;
+    const rightEyeOpen = rightEyeGap / faceHeight > 0.018;
+
+    const headRoll = Math.atan2(rightEar.y - leftEar.y, rightEar.x - leftEar.x);
+
+    return {
+      mouthOpenRatio,
+      isMouthOpen,
+      leftEyeOpen,
+      rightEyeOpen,
+      headRoll,
+      faceHeight,
+      faceWidth,
+      upperLip,
+      lowerLip,
+      mouthLeft,
+      mouthRight,
+      mouthCenter: { x: (upperLip.x + lowerLip.x) / 2, y: (upperLip.y + lowerLip.y) / 2 },
+      forehead,
+      chin,
+      leftEar,
+      rightEar,
+      noseTip: pt(landmarks, 1, w, h),
+      noseBridge: pt(landmarks, 168, w, h),
+      leftEyeCenter: landmarks[468] ? pt(landmarks, 468, w, h) : { x: (pt(landmarks, 33, w, h).x + pt(landmarks, 133, w, h).x) / 2, y: (pt(landmarks, 159, w, h).y + pt(landmarks, 145, w, h).y) / 2 },
+      rightEyeCenter: landmarks[473] ? pt(landmarks, 473, w, h) : { x: (pt(landmarks, 362, w, h).x + pt(landmarks, 263, w, h).x) / 2, y: (pt(landmarks, 386, w, h).y + pt(landmarks, 374, w, h).y) / 2 },
+      leftCheek: pt(landmarks, 205, w, h),
+      rightCheek: pt(landmarks, 425, w, h),
+      leftBrow: pt(landmarks, 105, w, h),
+      rightBrow: pt(landmarks, 334, w, h)
+    };
+  }
+
+  const LIP_OUTER_INDICES = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
+  const LEFT_EYE_INDICES = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
+  const RIGHT_EYE_INDICES = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398];
+  const FACE_OVAL_INDICES = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+
+  function drawLandmarkPath(landmarks, indices, w, h, close = true) {
+    ctx.beginPath();
+    indices.forEach((idx, i) => {
+      const p = pt(landmarks, idx, w, h);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    if (close) ctx.closePath();
+  }
+
+  // Draws key detected facial positions (Eyes, Ears, Lips, Nose) when Skeleton/Points button is active
+  function drawFaceKeyPositionsOverlay(landmarks, fm, w, h) {
+    if (!showSkeleton || !landmarks) return;
+    ctx.save();
+
+    // 1. Face Contour
+    ctx.strokeStyle = 'rgba(0, 242, 254, 0.32)';
+    ctx.lineWidth = 1.5;
+    drawLandmarkPath(landmarks, FACE_OVAL_INDICES, w, h, true);
+    ctx.stroke();
+
+    // 2. Eyes Contour + Iris Lock
+    ctx.strokeStyle = '#00f2fe';
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 8;
+    drawLandmarkPath(landmarks, LEFT_EYE_INDICES, w, h, true);
+    ctx.stroke();
+    drawLandmarkPath(landmarks, RIGHT_EYE_INDICES, w, h, true);
+    ctx.stroke();
+
+    // 3. Lips Contour
+    ctx.strokeStyle = '#ff2a85';
+    ctx.shadowColor = '#ff2a85';
+    drawLandmarkPath(landmarks, LIP_OUTER_INDICES, w, h, true);
+    ctx.stroke();
+
+    // 4. Ears, Eyes, Lips, Nose Callout Reticles
+    const keySpots = [
+      { p: fm.leftEyeCenter, label: 'EYE_L', color: '#00f2fe' },
+      { p: fm.rightEyeCenter, label: 'EYE_R', color: '#00f2fe' },
+      { p: fm.leftEar, label: 'EAR_L', color: '#00ff88' },
+      { p: fm.rightEar, label: 'EAR_R', color: '#00ff88' },
+      { p: fm.mouthCenter, label: 'LIPS', color: '#ff2a85' },
+      { p: fm.noseTip, label: 'NOSE', color: '#ffd700' }
+    ];
+
+    ctx.font = 'bold 10px Outfit, monospace';
+    keySpots.forEach(spot => {
+      ctx.beginPath();
+      ctx.arc(spot.p.x, spot.p.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = spot.color;
+      ctx.shadowColor = spot.color;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(spot.p.x, spot.p.y, 11, 0, Math.PI * 2);
+      ctx.strokeStyle = spot.color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = spot.color;
+      ctx.fillText(spot.label, spot.p.x + 14, spot.p.y + 3);
+    });
+
+    ctx.restore();
+  }
+
+  // Face FX 0: Cyberpunk Neon Visor & Ear Pods
+  function renderFaceCyberVisor(w, h, landmarks, fm) {
+    ctx.save();
+    const eyeMidX = (fm.leftEyeCenter.x + fm.rightEyeCenter.x) / 2;
+    const eyeMidY = (fm.leftEyeCenter.y + fm.rightEyeCenter.y) / 2;
+    const eyeDist = Math.hypot(fm.rightEyeCenter.x - fm.leftEyeCenter.x, fm.rightEyeCenter.y - fm.leftEyeCenter.y);
+    const angle = Math.atan2(fm.rightEyeCenter.y - fm.leftEyeCenter.y, fm.rightEyeCenter.x - fm.leftEyeCenter.x);
+
+    // Glowing Ear Cyber-Pods on Left & Right Ears
+    [fm.leftEar, fm.rightEar].forEach(ear => {
+      ctx.beginPath();
+      ctx.arc(ear.x, ear.y, fm.faceWidth * 0.08, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 242, 254, 0.25)';
+      ctx.strokeStyle = '#00f2fe';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#00f2fe';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Futuristic Cyclops / Cyberpunk Visor across Eyes
+    ctx.save();
+    ctx.translate(eyeMidX, eyeMidY);
+    ctx.rotate(angle);
+    const vw = eyeDist * 2.15;
+    const vh = eyeDist * 0.58;
+
+    const visorGrad = ctx.createLinearGradient(-vw / 2, 0, vw / 2, 0);
+    visorGrad.addColorStop(0, 'rgba(255, 42, 133, 0.78)');
+    visorGrad.addColorStop(0.5, 'rgba(0, 242, 254, 0.85)');
+    visorGrad.addColorStop(1, 'rgba(255, 42, 133, 0.78)');
+
+    ctx.beginPath();
+    ctx.moveTo(-vw * 0.5, -vh * 0.45);
+    ctx.lineTo(vw * 0.5, -vh * 0.45);
+    ctx.lineTo(vw * 0.42, vh * 0.55);
+    ctx.lineTo(vw * 0.08, vh * 0.25);
+    ctx.lineTo(-vw * 0.08, vh * 0.25);
+    ctx.lineTo(-vw * 0.42, vh * 0.55);
+    ctx.closePath();
+
+    ctx.fillStyle = visorGrad;
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 25;
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    // Scanning light bar inside visor
+    const scanX = Math.sin(performance.now() * 0.005) * (vw * 0.38);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(scanX - 12, -vh * 0.35, 24, vh * 0.7);
+    ctx.restore();
+
+    // Neon Cyber Lip Wireframe
+    ctx.strokeStyle = '#ff2a85';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff2a85';
+    ctx.shadowBlur = 12;
+    drawLandmarkPath(landmarks, LIP_OUTER_INDICES, w, h, true);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Face FX 1: Super Saiyan Laser Eyes & Lightning
+  function renderFaceLaserEyes(w, h, landmarks, fm) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 0, 85, 0.08)';
+    ctx.fillRect(0, 0, w, h);
+
+    const eyes = [fm.leftEyeCenter, fm.rightEyeCenter];
+    const targetY = h * 0.95;
+
+    eyes.forEach((eye, idx) => {
+      const spreadX = (idx === 0 ? -1 : 1) * w * 0.22;
+      const endX = eye.x + spreadX + Math.sin(performance.now() * 0.008 + idx) * 60;
+      const endY = targetY;
+
+      // Outer plasma beam
+      ctx.beginPath();
+      ctx.moveTo(eye.x, eye.y);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = 'rgba(255, 42, 133, 0.55)';
+      ctx.lineWidth = 22;
+      ctx.shadowColor = '#ff2a85';
+      ctx.shadowBlur = 30;
+      ctx.stroke();
+
+      // Inner white-hot core
+      ctx.beginPath();
+      ctx.moveTo(eye.x, eye.y);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = '#00f2fe';
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+
+      // Eye flare orb
+      ctx.beginPath();
+      ctx.arc(eye.x, eye.y, 16 + Math.sin(performance.now() * 0.02) * 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ff2a85';
+      ctx.shadowBlur = 28;
+      ctx.fill();
+    });
+
+    // Electric arc between eyebrows/forehead
+    ctx.strokeStyle = '#00f2fe';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(fm.leftEar.x, fm.leftEar.y);
+    for (let i = 1; i <= 6; i++) {
+      const t = i / 6;
+      const lx = fm.leftEar.x + (fm.rightEar.x - fm.leftEar.x) * t + (Math.random() - 0.5) * 18;
+      const ly = fm.forehead.y - 25 + (Math.random() - 0.5) * 20;
+      ctx.lineTo(lx, ly);
+    }
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Face FX 2: Royal Golden Crown & Ruby Ear Jewels
+  function renderFaceRoyalCrown(w, h, landmarks, fm) {
+    ctx.save();
+    const angle = Math.atan2(fm.rightEyeCenter.y - fm.leftEyeCenter.y, fm.rightEyeCenter.x - fm.leftEyeCenter.x);
+    const crownW = fm.faceWidth * 0.95;
+    const crownH = fm.faceHeight * 0.42;
+
+    // 1. Crown on Forehead
+    ctx.save();
+    ctx.translate(fm.forehead.x, fm.forehead.y - crownH * 0.25);
+    ctx.rotate(angle);
+
+    const goldGrad = ctx.createLinearGradient(-crownW / 2, -crownH, crownW / 2, 0);
+    goldGrad.addColorStop(0, '#ffd700');
+    goldGrad.addColorStop(0.5, '#fff6a9');
+    goldGrad.addColorStop(1, '#ff9900');
+
+    ctx.beginPath();
+    ctx.moveTo(-crownW * 0.45, 0);
+    ctx.lineTo(-crownW * 0.5, -crownH * 0.65);
+    ctx.lineTo(-crownW * 0.25, -crownH * 0.3);
+    ctx.lineTo(0, -crownH * 0.95);
+    ctx.lineTo(crownW * 0.25, -crownH * 0.3);
+    ctx.lineTo(crownW * 0.5, -crownH * 0.65);
+    ctx.lineTo(crownW * 0.45, 0);
+    ctx.closePath();
+
+    ctx.fillStyle = goldGrad;
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 22;
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    // Crown Gems
+    const gems = [
+      { x: 0, y: -crownH * 0.42, c: '#ff0055', r: 8 },
+      { x: -crownW * 0.25, y: -crownH * 0.16, c: '#00f2fe', r: 6 },
+      { x: crownW * 0.25, y: -crownH * 0.16, c: '#00f2fe', r: 6 }
+    ];
+    gems.forEach(g => {
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+      ctx.fillStyle = g.c;
+      ctx.shadowColor = g.c;
+      ctx.shadowBlur = 12;
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // 2. Hanging Earrings on Both Ears
+    [fm.leftEar, fm.rightEar].forEach(ear => {
+      const swing = Math.sin(performance.now() * 0.004) * 5;
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(ear.x, ear.y + 8);
+      ctx.lineTo(ear.x + swing, ear.y + 38);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(ear.x + swing, ear.y + 34);
+      ctx.lineTo(ear.x + swing + 9, ear.y + 48);
+      ctx.lineTo(ear.x + swing, ear.y + 62);
+      ctx.lineTo(ear.x + swing - 9, ear.y + 48);
+      ctx.closePath();
+      ctx.fillStyle = '#ff0055';
+      ctx.shadowColor = '#ff0055';
+      ctx.shadowBlur = 15;
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  // Face FX 3: Dragon Fire Breath (Interactive Mouth Open!)
+  function renderFaceDragonFire(w, h, landmarks, fm) {
+    ctx.save();
+
+    // Dragon Horns on Forehead
+    [[-1, fm.leftBrow], [1, fm.rightBrow]].forEach(([dir, brow]) => {
+      ctx.beginPath();
+      ctx.moveTo(brow.x - dir * 14, fm.forehead.y);
+      ctx.quadraticCurveTo(brow.x + dir * 35, fm.forehead.y - 60, brow.x + dir * 55, fm.forehead.y - 105);
+      ctx.quadraticCurveTo(brow.x + dir * 15, fm.forehead.y - 50, brow.x + dir * 14, fm.forehead.y);
+      ctx.fillStyle = '#ff3300';
+      ctx.shadowColor = '#ff5500';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+    });
+
+    // Glowing Dragon Eyes
+    [fm.leftEyeCenter, fm.rightEyeCenter].forEach(eye => {
+      ctx.beginPath();
+      ctx.arc(eye.x, eye.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffaa00';
+      ctx.shadowColor = '#ff3300';
+      ctx.shadowBlur = 16;
+      ctx.fill();
+    });
+
+    // Spawn fire particles from Mouth when Mouth is Open (or idle embers when closed)
+    const spawnCount = fm.isMouthOpen ? Math.floor(8 + fm.mouthOpenRatio * 14) : 2;
+    for (let i = 0; i < spawnCount; i++) {
+      faceFireParticles.push({
+        x: fm.mouthCenter.x + (Math.random() - 0.5) * (fm.isMouthOpen ? 28 : 10),
+        y: fm.mouthCenter.y + (Math.random() - 0.5) * 10,
+        vx: (Math.random() - 0.5) * (fm.isMouthOpen ? 7 : 2),
+        vy: fm.isMouthOpen ? (Math.random() * 6 + 3.5) : (-Math.random() * 2 - 0.5),
+        size: fm.isMouthOpen ? (Math.random() * 22 + 10) : (Math.random() * 7 + 4),
+        life: 1,
+        g: Math.floor(Math.random() * 180 + 40)
+      });
+    }
+
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = faceFireParticles.length - 1; i >= 0; i--) {
+      const p = faceFireParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.032;
+      p.size *= 0.97;
+      if (p.life <= 0) {
+        faceFireParticles.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, ${p.g}, 0, ${p.life})`;
+      ctx.shadowColor = '#ff4500';
+      ctx.shadowBlur = 14;
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  // Face FX 4: Neon Cat Ears, Whiskers & Cute Nose
+  function renderFaceNeonCat(w, h, landmarks, fm) {
+    ctx.save();
+    const angle = Math.atan2(fm.rightEyeCenter.y - fm.leftEyeCenter.y, fm.rightEyeCenter.x - fm.leftEyeCenter.x);
+    const earSize = fm.faceWidth * 0.36;
+
+    // 1. Cat Ears above Left/Right Forehead-Temple
+    ctx.save();
+    ctx.translate(fm.forehead.x, fm.forehead.y);
+    ctx.rotate(angle);
+
+    [-1, 1].forEach(dir => {
+      const baseX = dir * fm.faceWidth * 0.32;
+      // Outer Neon Ear
+      ctx.beginPath();
+      ctx.moveTo(baseX - dir * earSize * 0.45, -10);
+      ctx.lineTo(baseX + dir * earSize * 0.35, -earSize * 1.15);
+      ctx.lineTo(baseX + dir * earSize * 0.55, 15);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(20, 10, 35, 0.85)';
+      ctx.strokeStyle = '#ff66cc';
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = '#ff66cc';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner Pink Triangle
+      ctx.beginPath();
+      ctx.moveTo(baseX - dir * earSize * 0.25, -5);
+      ctx.lineTo(baseX + dir * earSize * 0.28, -earSize * 0.82);
+      ctx.lineTo(baseX + dir * earSize * 0.38, 8);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 102, 204, 0.55)';
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // 2. Cute Pink Nose Triangle on Nose Tip
+    const nx = fm.noseTip.x;
+    const ny = fm.noseTip.y;
+    ctx.beginPath();
+    ctx.moveTo(nx - 12, ny - 6);
+    ctx.lineTo(nx + 12, ny - 6);
+    ctx.lineTo(nx, ny + 8);
+    ctx.closePath();
+    ctx.fillStyle = '#ff2a85';
+    ctx.shadowColor = '#ff2a85';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+
+    // 3. Whiskers on Left and Right Cheeks
+    const whiskerW = fm.faceWidth * 0.34;
+    const wiggle = Math.sin(performance.now() * 0.008) * 4;
+    ctx.strokeStyle = '#00f2fe';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 12;
+
+    [-1, 0, 1].forEach(row => {
+      // Left Cheek
+      ctx.beginPath();
+      ctx.moveTo(fm.leftCheek.x, fm.leftCheek.y + row * 10);
+      ctx.lineTo(fm.leftCheek.x - whiskerW, fm.leftCheek.y + row * 18 + wiggle);
+      ctx.stroke();
+
+      // Right Cheek
+      ctx.beginPath();
+      ctx.moveTo(fm.rightCheek.x, fm.rightCheek.y + row * 10);
+      ctx.lineTo(fm.rightCheek.x + whiskerW, fm.rightCheek.y + row * 18 + wiggle);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  // Face FX 5: Terminator Cyborg Mesh & Red Scanner Eye
+  function renderFaceCyborgHud(w, h, landmarks, fm) {
+    ctx.save();
+
+    // Geometric wireframe connecting face landmarks
+    ctx.strokeStyle = 'rgba(0, 242, 254, 0.38)';
+    ctx.lineWidth = 1;
+    drawLandmarkPath(landmarks, FACE_OVAL_INDICES, w, h, true);
+    ctx.stroke();
+
+    // Symmetrical cyber circuit lines across cheeks, nose, ears, lips
+    const circuits = [
+      [10, 168, 1, 13, 152],
+      [234, 205, 1, 425, 454],
+      [234, 33, 168, 263, 454],
+      [61, 205, 33, 10, 263, 425, 291]
+    ];
+    ctx.strokeStyle = 'rgba(255, 0, 60, 0.55)';
+    ctx.lineWidth = 1.4;
+    circuits.forEach(path => {
+      drawLandmarkPath(landmarks, path, w, h, false);
+      ctx.stroke();
+    });
+
+    // T-800 Glowing Red Cyborg Eye on Right Eye + Rotating Target HUD on Left Eye
+    const rEye = fm.rightEyeCenter;
+    ctx.beginPath();
+    ctx.arc(rEye.x, rEye.y, 12, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff003c';
+    ctx.shadowColor = '#ff003c';
+    ctx.shadowBlur = 25;
+    ctx.fill();
+
+    const lEye = fm.leftEyeCenter;
+    const rot = performance.now() * 0.003;
+    ctx.strokeStyle = '#00f2fe';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(lEye.x, lEye.y, 28, rot, rot + Math.PI * 1.4);
+    ctx.stroke();
+
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#ff003c';
+    ctx.fillText(`CYBORG_LOCK // MOUTH: ${Math.round(fm.mouthOpenRatio * 100)}%`, fm.chin.x - 85, fm.chin.y + 30);
+
+    ctx.restore();
+  }
+
+  // Face FX 6: Heart Shades & Floating Kiss Hearts
+  function renderFaceHeartPop(w, h, landmarks, fm) {
+    ctx.save();
+
+    function drawHeart(cx, cy, size, color, fill = true) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.beginPath();
+      ctx.moveTo(0, size * 0.3);
+      ctx.bezierCurveTo(-size, -size * 0.4, -size * 0.5, -size * 0.95, 0, -size * 0.35);
+      ctx.bezierCurveTo(size * 0.5, -size * 0.95, size, -size * 0.4, 0, size * 0.3);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 16;
+      if (fill) ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const heartSize = fm.faceWidth * 0.22;
+    drawHeart(fm.leftEyeCenter.x, fm.leftEyeCenter.y + 4, heartSize, 'rgba(255, 20, 147, 0.78)');
+    drawHeart(fm.rightEyeCenter.x, fm.rightEyeCenter.y + 4, heartSize, 'rgba(255, 20, 147, 0.78)');
+
+    // Bridge between heart glasses
+    ctx.beginPath();
+    ctx.moveTo(fm.leftEyeCenter.x + heartSize * 0.4, fm.leftEyeCenter.y - 4);
+    ctx.lineTo(fm.rightEyeCenter.x - heartSize * 0.4, fm.rightEyeCenter.y - 4);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Glowing Pink Lips
+    ctx.fillStyle = 'rgba(255, 20, 147, 0.55)';
+    ctx.strokeStyle = '#ff1493';
+    ctx.lineWidth = 2;
+    drawLandmarkPath(landmarks, LIP_OUTER_INDICES, w, h, true);
+    ctx.fill();
+    ctx.stroke();
+
+    // Spawn floating hearts from lips (faster when mouth opens!)
+    if (Math.random() < (fm.isMouthOpen ? 0.55 : 0.12)) {
+      faceHearts.push({
+        x: fm.mouthCenter.x + (Math.random() - 0.5) * 30,
+        y: fm.mouthCenter.y,
+        vx: (Math.random() - 0.5) * 2.5,
+        vy: -Math.random() * 3 - 1.5,
+        size: 12 + Math.random() * 14,
+        life: 1,
+        color: Math.random() > 0.5 ? '#ff1493' : '#ff66cc'
+      });
+    }
+
+    for (let i = faceHearts.length - 1; i >= 0; i--) {
+      const ht = faceHearts[i];
+      ht.x += ht.vx;
+      ht.y += ht.vy;
+      ht.life -= 0.02;
+      if (ht.life <= 0) {
+        faceHearts.splice(i, 1);
+        continue;
+      }
+      ctx.globalAlpha = ht.life;
+      drawHeart(ht.x, ht.y, ht.size, ht.color);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // Face FX 7: DJ Studio Headphones on Ears & Mouth-Reactive Equalizer
+  function renderFaceDjEqualizer(w, h, landmarks, fm) {
+    ctx.save();
+
+    // Headband Arc connecting Left Ear -> Forehead -> Right Ear
+    ctx.beginPath();
+    ctx.moveTo(fm.leftEar.x, fm.leftEar.y);
+    ctx.quadraticCurveTo(fm.forehead.x, fm.forehead.y - fm.faceHeight * 0.55, fm.rightEar.x, fm.rightEar.y);
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 8;
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 20;
+    ctx.stroke();
+
+    // Studio Ear Cups on Both Ears
+    const cupR = fm.faceWidth * 0.13;
+    [fm.leftEar, fm.rightEar].forEach(ear => {
+      ctx.beginPath();
+      ctx.ellipse(ear.x, ear.y, cupR * 0.75, cupR * 1.15, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#0b1325';
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Equalizer Bars around Mouth / Jaw reactive to Lip movement
+    const bars = 16;
+    const barSpacing = (fm.faceWidth * 0.7) / bars;
+    const startX = fm.mouthCenter.x - (fm.faceWidth * 0.35);
+    const baseY = fm.chin.y + 28;
+
+    for (let i = 0; i < bars; i++) {
+      const wave = Math.abs(Math.sin(performance.now() * 0.01 + i * 0.5));
+      const boost = 1 + fm.mouthOpenRatio * 2.8;
+      const bh = (8 + wave * 24) * boost;
+      const bx = startX + i * barSpacing;
+
+      ctx.fillStyle = i % 2 === 0 ? '#00ff88' : '#00f2fe';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 10;
+      ctx.fillRect(bx, baseY - bh / 2, barSpacing * 0.65, bh);
+    }
+
+    ctx.restore();
+  }
+
+  // Face FX 8: Anime Sharingan Eyes & Chakra Aura
+  function renderFaceAnimeSharingan(w, h, landmarks, fm) {
+    ctx.save();
+    const rot = performance.now() * 0.005;
+
+    // Anime Speed Lines around viewport edge
+    const cx = fm.noseBridge.x;
+    const cy = fm.noseBridge.y;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * Math.PI * 2;
+      const r1 = Math.max(w, h) * 0.34;
+      const r2 = Math.max(w, h) * 0.75;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+      ctx.stroke();
+    }
+
+    // Sharingan on Both Eyes
+    const eyeR = fm.faceWidth * 0.065;
+    [fm.leftEyeCenter, fm.rightEyeCenter].forEach(eye => {
+      ctx.save();
+      ctx.translate(eye.x, eye.y);
+      ctx.rotate(rot);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, eyeR, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(230, 0, 18, 0.85)';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000000';
+      ctx.stroke();
+
+      // Inner ring + pupil
+      ctx.beginPath();
+      ctx.arc(0, 0, eyeR * 0.58, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, eyeR * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+
+      // 3 Tomoe dots
+      for (let t = 0; t < 3; t++) {
+        const ta = (t * Math.PI * 2) / 3;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ta) * eyeR * 0.58, Math.sin(ta) * eyeR * 0.58, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    // Ninja Headband Plate on Forehead
+    const angle = Math.atan2(fm.rightEyeCenter.y - fm.leftEyeCenter.y, fm.rightEyeCenter.x - fm.leftEyeCenter.x);
+    ctx.save();
+    ctx.translate(fm.forehead.x, fm.forehead.y - 10);
+    ctx.rotate(angle);
+    const bw = fm.faceWidth * 0.55;
+    const bh = fm.faceHeight * 0.14;
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+    ctx.strokeRect(-bw / 2, -bh / 2, bw, bh);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  // Face FX 9: Cosmic Astral Avatar, Third Eye & Constellation
+  function renderFaceCosmicAvatar(w, h, landmarks, fm) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(20, 5, 45, 0.18)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Glowing Third Eye on Forehead/Glabella
+    const tx = (fm.forehead.x + fm.noseBridge.x) / 2;
+    const ty = (fm.forehead.y + fm.noseBridge.y) / 2;
+    ctx.beginPath();
+    ctx.ellipse(tx, ty, 18, 9, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#a855f7';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 22;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // Star Constellation connecting Ears, Eyes, Nose, Lips, Forehead
+    const stars = [fm.leftEar, fm.leftEyeCenter, fm.forehead, fm.rightEyeCenter, fm.rightEar, fm.rightCheek, fm.mouthCenter, fm.leftCheek, fm.noseTip];
+    ctx.strokeStyle = 'rgba(0, 242, 254, 0.55)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    stars.forEach((s, i) => {
+      if (i === 0) ctx.moveTo(s.x, s.y);
+      else ctx.lineTo(s.x, s.y);
+    });
+    ctx.closePath();
+    ctx.stroke();
+
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+    });
+
+    // Cosmic Stardust Tears from Both Eyes
+    if (Math.random() < 0.35) {
+      [fm.leftEyeCenter, fm.rightEyeCenter].forEach(eye => {
+        faceCosmicTears.push({
+          x: eye.x + (Math.random() - 0.5) * 14,
+          y: eye.y + 8,
+          vy: 1.5 + Math.random() * 2,
+          life: 1,
+          color: Math.random() > 0.5 ? '#00f2fe' : '#a855f7'
+        });
+      });
+    }
+
+    for (let i = faceCosmicTears.length - 1; i >= 0; i--) {
+      const tear = faceCosmicTears[i];
+      tear.y += tear.vy;
+      tear.life -= 0.025;
+      if (tear.life <= 0) {
+        faceCosmicTears.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(tear.x, tear.y, 3 * tear.life, 0, Math.PI * 2);
+      ctx.fillStyle = tear.color;
+      ctx.shadowColor = tear.color;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function selectFaceEffect(index) {
+    if (index < 0) index = FACE_EFFECTS.length - 1;
+    if (index >= FACE_EFFECTS.length) index = 0;
+    activeFaceEffectIndex = index;
+    const fx = FACE_EFFECTS[index];
+
+    if (currentPage === 'face') {
+      fingerBadge.textContent = fx.badge;
+      effectNameTitle.textContent = fx.title;
+      effectSubTitle.textContent = fx.sub;
+      effectBanner.style.borderColor = fx.color;
+      effectBanner.style.boxShadow = fx.glow;
+      vhsOverlay.classList.add('hidden');
+    }
+
+    faceEffectCards.forEach(card => {
+      const cardIdx = parseInt(card.dataset.faceFx, 10);
+      card.classList.toggle('active', cardIdx === index);
+    });
+  }
+
+  function switchPage(page) {
+    currentPage = page === 'face' ? 'face' : 'hand';
+    const isFace = currentPage === 'face';
+
+    switchHandPageBtn?.classList.toggle('active', !isFace);
+    switchFacePageBtn?.classList.toggle('active', isFace);
+
+    gestureIndicator?.classList.toggle('hidden', isFace);
+    faceTelemetryHud?.classList.toggle('hidden', !isFace);
+    handDockTitle?.classList.toggle('hidden', isFace);
+    faceDockTitle?.classList.toggle('hidden', !isFace);
+    handEffectsGrid?.classList.toggle('hidden', isFace);
+    faceEffectsGrid?.classList.toggle('hidden', !isFace);
+
+    if (isFace) {
+      brandTitle.textContent = 'AI Face FX Studio';
+      brandSubtext.textContent = 'تشخیص هوشمند چشم، گوش، لب و بینی + ۱۰ افکت زنده چهره';
+      primaryMetricLabel.textContent = 'نقاط چهره';
+      fingerCountDisplay.textContent = latestFaceLandmarks ? '468' : '0';
+      skeletonBtnLabel.textContent = 'نقاط کلیدی صورت';
+      selectFaceEffect(activeFaceEffectIndex);
+    } else {
+      brandTitle.textContent = 'AI Finger FX Vision';
+      brandSubtext.textContent = 'شناسایی هوشمند حرکات دست و افکت‌های آنی';
+      primaryMetricLabel.textContent = 'تعداد انگشت';
+      skeletonBtnLabel.textContent = 'اسکلت دست';
+      selectEffect(activeEffectIndex);
+    }
+  }
+
   // --- NON-BLOCKING ASYNC AI INFERENCE ---
   async function triggerAiInference() {
-    if (isAiInferring || !mediaPipeHands || !isModelReady) return;
+    if (isAiInferring) return;
     if (video.paused || video.ended || video.readyState < 2) return;
 
-    isAiInferring = true;
-    try {
-      await mediaPipeHands.send({ image: video });
-    } catch (e) {
-      // Ignore dropped frame
-    } finally {
-      isAiInferring = false;
+    if (currentPage === 'face') {
+      if (!mediaPipeFaceMesh || !isFaceModelReady) return;
+      isAiInferring = true;
+      try {
+        await mediaPipeFaceMesh.send({ image: video });
+      } catch (e) {
+      } finally {
+        isAiInferring = false;
+      }
+    } else {
+      if (!mediaPipeHands || !isModelReady) return;
+      isAiInferring = true;
+      try {
+        await mediaPipeHands.send({ image: video });
+      } catch (e) {
+      } finally {
+        isAiInferring = false;
+      }
     }
   }
 
@@ -1126,21 +2114,47 @@
       ctx.drawImage(video, 0, 0, w, h);
       ctx.restore();
 
-      // 2. Render Active Camera Effect
-      const lm = latestLandmarks ? latestLandmarks[0] : null;
-      switch (activeEffectIndex) {
-        case 0: renderMatrixEffect(w, h, lm); break;
-        case 1: renderLaserEffect(w, h, lm); break;
-        case 2: renderHologramEffect(w, h, lm); break;
-        case 3: renderFireEffect(w, h, lm); break;
-        case 4: renderVhsEffect(w, h); break;
-        case 5: renderGalaxyEffect(w, h, lm); break;
-        default: renderMatrixEffect(w, h, lm);
-      }
+      // 2. Render Active Page Effect (Hand FX or Face FX)
+      if (currentPage === 'face') {
+        const flm = latestFaceLandmarks ? latestFaceLandmarks[0] : null;
+        if (flm) {
+          const fm = analyzeFaceLandmarks(flm, w, h);
+          faceMetrics = fm;
 
-      // 3. Render Hand Skeleton
-      if (showSkeleton && lm) {
-        drawHandSkeleton(lm, w, h);
+          switch (activeFaceEffectIndex) {
+            case 0: renderFaceCyberVisor(w, h, flm, fm); break;
+            case 1: renderFaceLaserEyes(w, h, flm, fm); break;
+            case 2: renderFaceRoyalCrown(w, h, flm, fm); break;
+            case 3: renderFaceDragonFire(w, h, flm, fm); break;
+            case 4: renderFaceNeonCat(w, h, flm, fm); break;
+            case 5: renderFaceCyborgHud(w, h, flm, fm); break;
+            case 6: renderFaceHeartPop(w, h, flm, fm); break;
+            case 7: renderFaceDjEqualizer(w, h, flm, fm); break;
+            case 8: renderFaceAnimeSharingan(w, h, flm, fm); break;
+            case 9: renderFaceCosmicAvatar(w, h, flm, fm); break;
+            default: renderFaceCyberVisor(w, h, flm, fm); break;
+          }
+
+          if (showSkeleton) {
+            drawFaceKeyPositionsOverlay(flm, fm, w, h);
+          }
+        }
+      } else {
+        const lm = latestLandmarks ? latestLandmarks[0] : null;
+        switch (activeEffectIndex) {
+          case 0: renderMatrixEffect(w, h, lm); break;
+          case 1: renderLaserEffect(w, h, lm); break;
+          case 2: renderHologramEffect(w, h, lm); break;
+          case 3: renderFireEffect(w, h, lm); break;
+          case 4: renderVhsEffect(w, h); break;
+          case 5: renderGalaxyEffect(w, h, lm); break;
+          default: renderMatrixEffect(w, h, lm);
+        }
+
+        // 3. Render Hand Skeleton
+        if (showSkeleton && lm) {
+          drawHandSkeleton(lm, w, h);
+        }
       }
 
       // 4. Trigger AI inference non-blockingly
@@ -1162,6 +2176,7 @@
 
   // --- MediaPipe Results Callback ---
   function onHandResults(results) {
+    if (currentPage !== 'hand') return;
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
       latestLandmarks = null;
       confidenceDisplay.textContent = '0%';
@@ -1185,7 +2200,36 @@
     updateGestureState(count, states);
   }
 
-  // --- Initialize MediaPipe Hands ---
+  function onFaceResults(results) {
+    if (currentPage !== 'face') return;
+    if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+      latestFaceLandmarks = null;
+      confidenceDisplay.textContent = '0%';
+      fingerCountDisplay.textContent = '0';
+      aiStatusBadge.className = 'status-badge warning';
+      aiStatusText.textContent = 'در انتظار قرارگیری صورت مقابل دوربین...';
+      [tagEyes, tagEars, tagLips, tagNose].forEach(el => el?.classList.remove('detected'));
+      return;
+    }
+
+    latestFaceLandmarks = results.multiFaceLandmarks;
+    const ptsCount = results.multiFaceLandmarks[0].length || 468;
+    fingerCountDisplay.textContent = ptsCount;
+    confidenceDisplay.textContent = '98%';
+    aiStatusBadge.className = 'status-badge';
+    aiStatusText.textContent = 'چشم، گوش و لب ردگیری شد';
+
+    [tagEyes, tagEars, tagLips, tagNose].forEach(el => el?.classList.add('detected'));
+    if (mouthStatText) {
+      mouthStatText.textContent = faceMetrics.isMouthOpen ? 'وضعیت دهان: باز (فعال 🔥)' : 'وضعیت دهان: بسته';
+    }
+    if (eyeStatText) {
+      const eyesOpen = faceMetrics.leftEyeOpen && faceMetrics.rightEyeOpen;
+      eyeStatText.textContent = eyesOpen ? 'چشم‌ها: باز' : 'چشم‌ها: پلک زدن 😉';
+    }
+  }
+
+  // --- Initialize MediaPipe Hands & FaceMesh ---
   function initMediaPipe() {
     if (typeof window.Hands === 'undefined') {
       console.warn('Waiting for MediaPipe library...');
@@ -1211,6 +2255,34 @@
       console.log('MediaPipe Hands Lite model ready.');
     } catch (err) {
       console.error('MediaPipe Init Error:', err);
+    }
+
+    initFaceMesh();
+  }
+
+  function initFaceMesh() {
+    if (typeof window.FaceMesh === 'undefined') {
+      setTimeout(initFaceMesh, 300);
+      return;
+    }
+
+    try {
+      mediaPipeFaceMesh = new window.FaceMesh({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+      });
+
+      mediaPipeFaceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      mediaPipeFaceMesh.onResults(onFaceResults);
+      isFaceModelReady = true;
+      console.log('MediaPipe FaceMesh model ready.');
+    } catch (err) {
+      console.error('MediaPipe FaceMesh Init Error:', err);
     }
   }
 
@@ -1278,7 +2350,9 @@
 
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `Hand_FX_Photo_${activeEffectIndex}_Fingers.png`;
+      link.download = currentPage === 'face'
+        ? `Face_FX_Photo_${activeFaceEffectIndex + 1}.png`
+        : `Hand_FX_Photo_${activeEffectIndex}_Fingers.png`;
       link.href = dataUrl;
       link.click();
 
@@ -1404,6 +2478,47 @@
         selectEffect(fingers);
         playGestureSound(fingers);
       });
+    });
+
+    switchHandPageBtn?.addEventListener('click', () => {
+      initAudio();
+      playGestureSound(2);
+      switchPage('hand');
+    });
+
+    switchFacePageBtn?.addEventListener('click', () => {
+      initAudio();
+      playGestureSound(4);
+      switchPage('face');
+    });
+
+    faceEffectCards.forEach(card => {
+      card.addEventListener('click', () => {
+        initAudio();
+        const fxIdx = parseInt(card.dataset.faceFx, 10);
+        selectFaceEffect(fxIdx);
+        playGestureSound((fxIdx % 5) + 1);
+      });
+    });
+
+    prevFaceFxBtn?.addEventListener('click', () => {
+      initAudio();
+      selectFaceEffect(activeFaceEffectIndex - 1);
+      playGestureSound(2);
+    });
+
+    nextFaceFxBtn?.addEventListener('click', () => {
+      initAudio();
+      selectFaceEffect(activeFaceEffectIndex + 1);
+      playGestureSound(3);
+    });
+
+    randomFaceFxBtn?.addEventListener('click', () => {
+      initAudio();
+      let nextIdx = Math.floor(Math.random() * FACE_EFFECTS.length);
+      if (nextIdx === activeFaceEffectIndex) nextIdx = (nextIdx + 1) % FACE_EFFECTS.length;
+      selectFaceEffect(nextIdx);
+      playGestureSound(5);
     });
 
     window.addEventListener('click', initAudio, { once: true });

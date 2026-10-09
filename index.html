@@ -14,6 +14,7 @@
   <!-- MediaPipe dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   
   <link rel="stylesheet" href="style.css">
 </head>
@@ -33,9 +34,31 @@
           </svg>
         </div>
         <div class="brand-text">
-          <h1>AI Finger FX Vision</h1>
-          <span class="subtext">شناسایی هوشمند حرکات دست و افکت‌های آنی</span>
+          <h1 id="brandTitle">AI Finger FX Vision</h1>
+          <span class="subtext" id="brandSubtext">شناسایی هوشمند حرکات دست و افکت‌های آنی</span>
         </div>
+      </div>
+
+      <!-- Page / View Switcher (Hand FX vs Face FX) -->
+      <div class="page-switcher">
+        <button id="switchHandPageBtn" class="page-nav-btn active">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+          </svg>
+          <span>افکت دست</span>
+        </button>
+        <button id="switchFacePageBtn" class="page-nav-btn face-cta">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+          </svg>
+          <span>افکت صورت</span>
+        </button>
       </div>
 
       <!-- Quick Metrics HUD -->
@@ -44,8 +67,8 @@
           <span class="metric-label">FPS</span>
           <span class="metric-val" id="fpsDisplay">--</span>
         </div>
-        <div class="metric-card">
-          <span class="metric-label">تعداد انگشت</span>
+        <div class="metric-card" id="primaryMetricCard">
+          <span class="metric-label" id="primaryMetricLabel">تعداد انگشت</span>
           <span class="metric-val highlight" id="fingerCountDisplay">0</span>
         </div>
         <div class="metric-card">
@@ -60,7 +83,7 @@
 
       <!-- Header Action Controls -->
       <div class="header-actions">
-        <button id="toggleAudioBtn" class="glass-btn icon-btn" title="صدا / افکت صوتی">
+        <button id="toggleAudioBtn" class="glass-btn icon-btn active" title="صدا / افکت صوتی">
           <svg id="audioIconOn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -74,12 +97,12 @@
           </svg>
         </button>
 
-        <button id="toggleSkeletonBtn" class="glass-btn" title="نمایش اسکلت دست">
+        <button id="toggleSkeletonBtn" class="glass-btn active" title="نمایش اسکلت / نقاط کلیدی">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M3 12h3m12 0h3M12 3v3m0 12v3"></path>
           </svg>
-          <span>اسکلت دست</span>
+          <span id="skeletonBtnLabel">اسکلت دست</span>
         </button>
 
         <button id="flipCameraBtn" class="glass-btn icon-btn" title="آینه کردن دوربین (Mirror)">
@@ -147,6 +170,22 @@
             </div>
           </div>
 
+          <!-- Face Landmarks Telemetry Indicator (Eyes, Ears, Lips, Nose) -->
+          <div class="face-telemetry-hud hidden" id="faceTelemetryHud">
+            <div class="telemetry-header">نقاط کلیدی شناسایی‌شده چهره</div>
+            <div class="telemetry-tags">
+              <span class="t-tag" id="tag-eyes"><span class="t-dot"></span>چشم‌ها</span>
+              <span class="t-tag" id="tag-ears"><span class="t-dot"></span>گوش‌ها</span>
+              <span class="t-tag" id="tag-lips"><span class="t-dot"></span>لب و دهان</span>
+              <span class="t-tag" id="tag-nose"><span class="t-dot"></span>بینی و پیشانی</span>
+            </div>
+            <div class="telemetry-stats">
+              <span id="mouthStatText">وضعیت دهان: بسته</span>
+              <span>·</span>
+              <span id="eyeStatText">چشم‌ها: باز</span>
+            </div>
+          </div>
+
           <!-- VHS Specific Overlay (Active in Mode 4) -->
           <div class="vhs-overlay hidden" id="vhsOverlay">
             <div class="vhs-rec"><span class="rec-dot"></span> REC</div>
@@ -202,11 +241,19 @@
       <!-- Bottom Interactive Effect Rack / Manual Gestures Selector -->
       <footer class="effect-dock">
         <div class="dock-header">
-          <div class="dock-title">
+          <div class="dock-title" id="handDockTitle">
             <span>راهنمای افکت‌های متناظر با تعداد انگشتان:</span>
             <div class="mode-switch">
               <button id="modeAutoBtn" class="mode-tab active">حالت خودکار با ژست هوشمند</button>
               <button id="modeManualBtn" class="mode-tab">حالت دستی</button>
+            </div>
+          </div>
+          <div class="dock-title hidden" id="faceDockTitle">
+            <span>استودیو افکت‌های چهره (۱۰ فیلتر تعاملی با تشخیص چشم، گوش و لب):</span>
+            <div class="mode-switch">
+              <button id="prevFaceFxBtn" class="mode-tab">قبلی</button>
+              <button id="randomFaceFxBtn" class="mode-tab active">افکت شانسی 🎲</button>
+              <button id="nextFaceFxBtn" class="mode-tab">بعدی</button>
             </div>
           </div>
           <div class="camera-select-wrap">
@@ -215,7 +262,8 @@
           </div>
         </div>
 
-        <div class="effects-grid">
+        <!-- Hand Effects Grid (6 Effects) -->
+        <div class="effects-grid" id="handEffectsGrid">
           
           <!-- Card 0 -->
           <div class="effect-card active" data-fingers="0" id="card-0">
@@ -275,6 +323,111 @@
             </div>
             <div class="card-title">سوپرنوا و گرداب کیهانی</div>
             <div class="card-desc">انفجار غبار ستاره‌ای و هاله‌های انرژی کهکشانی</div>
+          </div>
+
+        </div>
+
+        <!-- Face Effects Grid (10 Interactive Effects) -->
+        <div class="face-effects-grid hidden" id="faceEffectsGrid">
+
+          <!-- Face FX 0 -->
+          <div class="face-effect-card active" data-face-fx="0">
+            <div class="face-card-top">
+              <span class="face-card-num">01</span>
+              <span class="face-card-tag">چشم + گوش</span>
+            </div>
+            <div class="card-title">ویزور سایبرپانک نئونی</div>
+            <div class="card-desc">عینک آینده‌نگرانه روی چشم‌ها و هدفون نئونی روی گوش‌ها</div>
+          </div>
+
+          <!-- Face FX 1 -->
+          <div class="face-effect-card" data-face-fx="1">
+            <div class="face-card-top">
+              <span class="face-card-num">02</span>
+              <span class="face-card-tag">چشم + ابرو</span>
+            </div>
+            <div class="card-title">چشمان لیزری و صاعقه</div>
+            <div class="card-desc">پرتوهای پرقدرت لیزر از مردمک چشم و جرقه الکتریکی</div>
+          </div>
+
+          <!-- Face FX 2 -->
+          <div class="face-effect-card" data-face-fx="2">
+            <div class="face-card-top">
+              <span class="face-card-num">03</span>
+              <span class="face-card-tag">پیشانی + گوش</span>
+            </div>
+            <div class="card-title">تاج سلطنتی و گوشواره جواهر</div>
+            <div class="card-desc">تاج طلایی درخشان بالای سر و گوشواره‌های یاقوت آویزان</div>
+          </div>
+
+          <!-- Face FX 3 -->
+          <div class="face-effect-card" data-face-fx="3">
+            <div class="face-card-top">
+              <span class="face-card-num">04</span>
+              <span class="face-card-tag">لب و دهان (تعاملی)</span>
+            </div>
+            <div class="card-title">نفس اژدها و دهان آتشین</div>
+            <div class="card-desc">دهان خود را باز کنید تا شعله‌های مهیب آتش به بیرون فوران کند!</div>
+          </div>
+
+          <!-- Face FX 4 -->
+          <div class="face-effect-card" data-face-fx="4">
+            <div class="face-card-top">
+              <span class="face-card-num">05</span>
+              <span class="face-card-tag">گوش + بینی + گونه</span>
+            </div>
+            <div class="card-title">ببر نئونی و گوش‌های فانتزی</div>
+            <div class="card-desc">گوش‌های گربه‌ای متحرک، بینی فانتزی و سیبیل‌های درخشان</div>
+          </div>
+
+          <!-- Face FX 5 -->
+          <div class="face-effect-card" data-face-fx="5">
+            <div class="face-card-top">
+              <span class="face-card-num">06</span>
+              <span class="face-card-tag">۴۶۸ نقطه کامل</span>
+            </div>
+            <div class="card-title">ماسک سایبورگ ترمیناتور</div>
+            <div class="card-desc">شبکه هندسی تیتانیومی چهره با چشم اسکنر قرمز و رادار</div>
+          </div>
+
+          <!-- Face FX 6 -->
+          <div class="face-effect-card" data-face-fx="6">
+            <div class="face-card-top">
+              <span class="face-card-num">07</span>
+              <span class="face-card-tag">لب + چشم + گونه</span>
+            </div>
+            <div class="card-title">عینک قلبی و بوسه عشق</div>
+            <div class="card-desc">عینک قلبی صورتی، رژ لب نئونی و پرواز قلب‌ها با باز کردن دهان</div>
+          </div>
+
+          <!-- Face FX 7 -->
+          <div class="face-effect-card" data-face-fx="7">
+            <div class="face-card-top">
+              <span class="face-card-num">08</span>
+              <span class="face-card-tag">گوش + لب (اکولایزر)</span>
+            </div>
+            <div class="card-title">دی‌جی ست و هدفون استودیویی</div>
+            <div class="card-desc">هدفون بزرگ روی گوش‌ها و امواج صوتی هماهنگ با حرکت لب‌ها</div>
+          </div>
+
+          <!-- Face FX 8 -->
+          <div class="face-effect-card" data-face-fx="8">
+            <div class="face-card-top">
+              <span class="face-card-num">09</span>
+              <span class="face-card-tag">چشم‌ها + پیشانی</span>
+            </div>
+            <div class="card-title">شارینگان و هاله چاکرا انیمه</div>
+            <div class="card-desc">چشمان چرخان انیمه‌ای، هدبند نینجا و خطوط سرعت مانگا</div>
+          </div>
+
+          <!-- Face FX 9 -->
+          <div class="face-effect-card" data-face-fx="9">
+            <div class="face-card-top">
+              <span class="face-card-num">10</span>
+              <span class="face-card-tag">کل صورت + کهکشان</span>
+            </div>
+            <div class="card-title">آواتار کیهانی و چشم سوم</div>
+            <div class="card-desc">صورت فلکی ستاره‌ای روی اجزای چهره، چشم سوم و اشک‌های نورانی</div>
           </div>
 
         </div>

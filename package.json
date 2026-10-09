@@ -4,7 +4,9 @@
   "description": "Real-time AI Hand & Finger Tracking Camera with Dynamic FX",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build step required'"
   },
   "keywords": ["mediapipe", "camera", "hand-tracking", "finger-counter", "real-time-fx", "computer-vision"],
   "repository": {

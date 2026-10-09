@@ -1,0 +1,7 @@
+{
+  "name": "AI Finger FX Vision",
+  "description": "Real-time AI Hand & Finger Tracking Camera with Dynamic FX",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
