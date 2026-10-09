@@ -2060,9 +2060,8 @@
   //  AIR DRAWING ENGINE — Finger Painting Studio
   // =====================================================
 
-  // Dedicated offscreen canvas for persistent drawing
+  // Dedicated offscreen canvas for persistent drawing (composited directly onto outputCanvas)
   const drawCanvas = document.createElement('canvas');
-  drawCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;';
   const dCtx = drawCanvas.getContext('2d');
 
   // Drawing State
@@ -2070,35 +2069,43 @@
   let drawBrushStyle = 'neon';  // 'neon' | 'ink' | 'rainbow' | 'laser'
   let drawColor = '#00f2fe';
   let drawSize = 10;
-  let isDrawing = false;        // true when index finger down
+  let isDrawing = false;        // true when index finger or pointer is actively drawing
+  let isPointerDown = false;    // mouse/touch drawing support
   let drawLastX = null;
   let drawLastY = null;
+  let smoothFingerX = null;
+  let smoothFingerY = null;
   let rainbowHue = 0;
   let drawStrokeHistory = [];   // array of ImageData snapshots for undo
   let drawStrokesCount = 0;
-  let drawPrevFingerCount = -1;
-  let drawPrevIndexTip = null;
-
-  // Cursor indicator dot on canvas
-  const drawCursorEl = document.createElement('div');
-  drawCursorEl.style.cssText = 'position:absolute;width:16px;height:16px;border-radius:50%;border:2px solid #00ff88;pointer-events:none;transform:translate(-50%,-50%);transition:width 0.1s,height 0.1s;z-index:20;display:none;';
-  document.getElementById('stageContainer')?.appendChild(drawCursorEl);
-  document.getElementById('stageContainer')?.appendChild(drawCanvas);
+  let drawPrevMode = 'idle';    // 'idle' | 'hovering' | 'writing' | 'erasing'
+  let fistHoldFrames = 0;       // hold fist to quick-erase around hand
 
   function initDrawCanvas(w, h) {
+    if (!w || !h) return;
     if (drawCanvas.width !== w || drawCanvas.height !== h) {
-      // Preserve current drawing
-      const tempImg = dCtx.getImageData(0, 0, drawCanvas.width || w, drawCanvas.height || h);
+      let tempCanvas = null;
+      if (drawCanvas.width > 0 && drawCanvas.height > 0) {
+        tempCanvas = document.createElement('canvas');
+        tempCanvas.width = drawCanvas.width;
+        tempCanvas.height = drawCanvas.height;
+        tempCanvas.getContext('2d').drawImage(drawCanvas, 0, 0);
+      }
       drawCanvas.width = w;
       drawCanvas.height = h;
-      try { dCtx.putImageData(tempImg, 0, 0); } catch(e) {}
+      if (tempCanvas) {
+        dCtx.drawImage(tempCanvas, 0, 0, w, h);
+      }
     }
   }
 
   function saveDrawUndo() {
-    const snap = dCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
-    drawStrokeHistory.push(snap);
-    if (drawStrokeHistory.length > 40) drawStrokeHistory.shift(); // max 40 undo levels
+    if (!drawCanvas.width || !drawCanvas.height) return;
+    try {
+      const snap = dCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+      drawStrokeHistory.push(snap);
+      if (drawStrokeHistory.length > 40) drawStrokeHistory.shift();
+    } catch (e) {}
   }
 
   function undoLastStroke() {
@@ -2110,22 +2117,25 @@
   }
 
   function clearDrawCanvas() {
+    if (!drawCanvas.width || !drawCanvas.height) return;
     saveDrawUndo();
     dCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
     drawStrokesCount = 0;
     drawLastX = null;
     drawLastY = null;
+    smoothFingerX = null;
+    smoothFingerY = null;
     updateDrawHud();
   }
 
   function saveDrawArt() {
-    // Composite: camera frame + drawing
+    initAudio();
+    playGestureSound(5);
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
+    exportCanvas.width = canvas.width || 1280;
+    exportCanvas.height = canvas.height || 720;
     const eCtx = exportCanvas.getContext('2d');
     eCtx.drawImage(canvas, 0, 0);
-    eCtx.drawImage(drawCanvas, 0, 0);
     const link = document.createElement('a');
     link.download = `Air_Drawing_${Date.now()}.png`;
     link.href = exportCanvas.toDataURL('image/png');
@@ -2143,183 +2153,255 @@
   }
 
   function setDrawStatus(state) {
-    // state: 'idle' | 'hovering' | 'writing' | 'erasing'
     if (!drawStatusPill || !drawStatusText) return;
     const labels = {
-      idle: 'در انتظار دست...',
-      hovering: 'حالت هاور — ✌️ بدون نوشتن',
-      writing: '✍️ در حال نوشتن...',
+      idle: '✋ دست آماده — ۱ انگشت برای نوشتن باز کنید',
+      hovering: '✌️ حالت هاور — جابجایی آزاد بدون رسم خط',
+      writing: '✍️ در حال نوشتن و نقاشی...',
       erasing: '🧹 در حال پاک کردن...'
     };
     drawStatusPill.className = `draw-status-pill${state === 'writing' ? ' writing' : state === 'erasing' ? ' erasing' : state === 'hovering' ? ' hovering' : ''}`;
     drawStatusText.textContent = labels[state] || labels.idle;
   }
 
-  function applyDrawStroke(x1, y1, x2, y2) {
-    if (drawTool === 'eraser') {
+  function applyDrawStroke(x1, y1, x2, y2, forceEraser = false) {
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    if (drawTool === 'eraser' || forceEraser) {
+      dCtx.save();
       dCtx.globalCompositeOperation = 'destination-out';
-      dCtx.lineWidth = drawSize * 3.5;
+      dCtx.lineWidth = forceEraser ? Math.max(48, drawSize * 4.5) : Math.max(24, drawSize * 3.5);
       dCtx.lineCap = 'round';
       dCtx.lineJoin = 'round';
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
+      dCtx.quadraticCurveTo(x1, y1, midX, midY);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.globalCompositeOperation = 'source-over';
+      dCtx.restore();
       return;
     }
 
+    dCtx.save();
     dCtx.globalCompositeOperation = 'source-over';
     dCtx.lineCap = 'round';
     dCtx.lineJoin = 'round';
 
     if (drawBrushStyle === 'neon') {
-      // Glow outer
-      dCtx.save();
-      dCtx.lineWidth = drawSize * 3;
+      // Outer Neon Bloom
+      dCtx.lineWidth = drawSize * 2.4;
       dCtx.strokeStyle = drawColor + '55';
       dCtx.shadowColor = drawColor;
-      dCtx.shadowBlur = 20;
+      dCtx.shadowBlur = 22;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
+      dCtx.quadraticCurveTo(x1, y1, midX, midY);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      // Core
-      dCtx.lineWidth = drawSize * 0.8;
+
+      // Inner Core
+      dCtx.lineWidth = Math.max(2, drawSize * 0.75);
       dCtx.strokeStyle = '#ffffff';
       dCtx.shadowColor = drawColor;
-      dCtx.shadowBlur = 10;
+      dCtx.shadowBlur = 12;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
+      dCtx.quadraticCurveTo(x1, y1, midX, midY);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.restore();
 
     } else if (drawBrushStyle === 'ink') {
-      dCtx.save();
       dCtx.lineWidth = drawSize;
       dCtx.strokeStyle = drawColor;
-      dCtx.shadowBlur = 0;
-      dCtx.globalAlpha = 0.88;
+      dCtx.shadowColor = drawColor;
+      dCtx.shadowBlur = 2;
+      dCtx.globalAlpha = 0.95;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
+      dCtx.quadraticCurveTo(x1, y1, midX, midY);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.restore();
 
     } else if (drawBrushStyle === 'rainbow') {
-      rainbowHue = (rainbowHue + 2) % 360;
+      rainbowHue = (rainbowHue + 3) % 360;
       const hsl = `hsl(${rainbowHue}, 100%, 60%)`;
-      dCtx.save();
-      dCtx.lineWidth = drawSize * 2.5;
-      dCtx.strokeStyle = hsl + '66';
+      dCtx.lineWidth = drawSize * 2.2;
+      dCtx.strokeStyle = hsl;
       dCtx.shadowColor = hsl;
       dCtx.shadowBlur = 18;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
+      dCtx.quadraticCurveTo(x1, y1, midX, midY);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.lineWidth = drawSize * 0.7;
+
+      dCtx.lineWidth = Math.max(2, drawSize * 0.65);
       dCtx.strokeStyle = '#ffffff';
-      dCtx.shadowBlur = 5;
+      dCtx.shadowBlur = 6;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.restore();
 
     } else if (drawBrushStyle === 'laser') {
-      dCtx.save();
-      dCtx.lineWidth = drawSize * 0.5;
+      dCtx.lineWidth = Math.max(2, drawSize * 0.85);
       dCtx.strokeStyle = drawColor;
       dCtx.shadowColor = drawColor;
-      dCtx.shadowBlur = 30;
+      dCtx.shadowBlur = 28;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.lineWidth = 1;
-      dCtx.strokeStyle = '#fff';
-      dCtx.shadowBlur = 5;
+
+      dCtx.lineWidth = Math.max(1.5, drawSize * 0.3);
+      dCtx.strokeStyle = '#ffffff';
+      dCtx.shadowBlur = 8;
       dCtx.beginPath();
       dCtx.moveTo(x1, y1);
       dCtx.lineTo(x2, y2);
       dCtx.stroke();
-      dCtx.restore();
     }
+    dCtx.restore();
   }
 
   function processDrawGesture(landmarks, w, h) {
+    if (isPointerDown) return; // Let mouse/touch take priority if actively dragging
+
     if (!landmarks) {
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
       isDrawing = false;
       drawLastX = null;
       drawLastY = null;
-      drawPrevFingerCount = -1;
+      smoothFingerX = null;
+      smoothFingerY = null;
+      drawPrevMode = 'idle';
       setDrawStatus('idle');
-      drawCursorEl.style.display = 'none';
       return;
     }
 
-    const { count } = analyzeHandFingers(landmarks);
+    const { count, states } = analyzeHandFingers(landmarks);
     const indexTip = landmarks[8];
-    const fingerX = (isMirrored ? 1 - indexTip.x : indexTip.x) * w;
-    const fingerY = indexTip.y * h;
+    const rawX = (isMirrored ? 1 - indexTip.x : indexTip.x) * w;
+    const rawY = indexTip.y * h;
 
-    // Map finger position to canvas element coords for CSS cursor
-    const stageEl = document.getElementById('stageContainer');
-    if (stageEl) {
-      const rect = stageEl.getBoundingClientRect();
-      const ratioX = rect.width / w;
-      const ratioY = rect.height / h;
-      drawCursorEl.style.display = 'block';
-      drawCursorEl.style.left = (fingerX * ratioX) + 'px';
-      drawCursorEl.style.top = (fingerY * ratioY) + 'px';
-      const toolColor = drawTool === 'eraser' ? '#ff5555' : drawColor;
-      const toolSize = drawTool === 'eraser' ? Math.max(16, drawSize * 2.5) : Math.max(12, drawSize);
-      drawCursorEl.style.width = toolSize + 'px';
-      drawCursorEl.style.height = toolSize + 'px';
-      drawCursorEl.style.borderColor = toolColor;
-      drawCursorEl.style.boxShadow = `0 0 10px ${toolColor}`;
+    // Smooth coordinates with EMA to eliminate webcam jitter while staying responsive
+    if (smoothFingerX === null || smoothFingerY === null) {
+      smoothFingerX = rawX;
+      smoothFingerY = rawY;
+    } else {
+      smoothFingerX = smoothFingerX * 0.4 + rawX * 0.6;
+      smoothFingerY = smoothFingerY * 0.4 + rawY * 0.6;
     }
 
-    if (count === 0) {
-      // Fist: lift pen
-      if (isDrawing) {
-        drawStrokesCount++;
-        updateDrawHud();
-      }
-      isDrawing = false;
-      drawLastX = null;
-      drawLastY = null;
-      setDrawStatus('idle');
+    const fingerX = smoothFingerX;
+    const fingerY = smoothFingerY;
 
-    } else if (count >= 2) {
-      // 2+ fingers: hover, no drawing
-      if (isDrawing) {
-        drawStrokesCount++;
-        updateDrawHud();
-      }
-      isDrawing = false;
-      drawLastX = null;
-      drawLastY = null;
-      setDrawStatus('hovering');
+    // Gesture Classification for Natural Air Writing:
+    // 1. Writing Mode: Index finger is open AND Middle, Ring, Pinky are closed (regardless of thumb position!)
+    const isIndexPointing = states.index && !states.middle && !states.ring && !states.pinky;
+    // 2. Hover Mode: Index AND Middle are both open (Peace sign ✌️ or open palm)
+    const isHoverGesture = states.index && states.middle;
+    // 3. Fist / Stop / Palm Eraser: No main fingers open
+    const isFist = !states.index && !states.middle && !states.ring && !states.pinky;
 
-    } else {
-      // Exactly 1 finger: draw!
-      if (count !== drawPrevFingerCount) {
-        // Freshly entering draw mode — save undo snapshot
+    if (isIndexPointing) {
+      fistHoldFrames = 0;
+      const modeNow = drawTool === 'eraser' ? 'erasing' : 'writing';
+      if (drawPrevMode !== modeNow) {
         saveDrawUndo();
       }
-      if (isDrawing && drawLastX !== null) {
-        applyDrawStroke(drawLastX, drawLastY, fingerX, fingerY);
+      if (isDrawing && drawLastX !== null && drawLastY !== null) {
+        applyDrawStroke(drawLastX, drawLastY, fingerX, fingerY, false);
+      } else {
+        // Draw initial dot on touch-down
+        applyDrawStroke(fingerX, fingerY, fingerX + 0.5, fingerY + 0.5, false);
       }
       isDrawing = true;
-      setDrawStatus(drawTool === 'eraser' ? 'erasing' : 'writing');
+      drawLastX = fingerX;
+      drawLastY = fingerY;
+      drawPrevMode = modeNow;
+      setDrawStatus(modeNow);
+
+    } else if (isHoverGesture) {
+      fistHoldFrames = 0;
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
+      isDrawing = false;
+      drawLastX = fingerX;
+      drawLastY = fingerY;
+      drawPrevMode = 'hovering';
+      setDrawStatus('hovering');
+
+    } else if (isFist) {
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
+      isDrawing = false;
+      fistHoldFrames++;
+      // If user holds a closed fist for >12 frames and moves it, act as quick fist-eraser!
+      const palm = landmarks[9];
+      const palmX = (isMirrored ? 1 - palm.x : palm.x) * w;
+      const palmY = palm.y * h;
+      if (fistHoldFrames > 12 && drawLastX !== null) {
+        if (drawPrevMode !== 'erasing') saveDrawUndo();
+        applyDrawStroke(drawLastX, drawLastY, palmX, palmY, true);
+        drawPrevMode = 'erasing';
+        setDrawStatus('erasing');
+      } else {
+        drawPrevMode = 'idle';
+        setDrawStatus('idle');
+      }
+      drawLastX = palmX;
+      drawLastY = palmY;
+
+    } else {
+      fistHoldFrames = 0;
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
+      isDrawing = false;
+      drawLastX = fingerX;
+      drawLastY = fingerY;
+      drawPrevMode = 'hovering';
+      setDrawStatus('hovering');
+    }
+  }
+
+  // Helper to convert Mouse/Touch clientX/Y to internal canvas coordinates
+  function getCanvasCoordsFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
+    const w = canvas.width || 1280;
+    const h = canvas.height || 720;
+
+    // Account for object-fit: contain letterboxing
+    const videoRatio = w / h;
+    const rectRatio = rect.width / rect.height;
+    let renderW = rect.width;
+    let renderH = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (rectRatio > videoRatio) {
+      renderW = rect.height * videoRatio;
+      offsetX = (rect.width - renderW) / 2;
+    } else {
+      renderH = rect.width / videoRatio;
+      offsetY = (rect.height - renderH) / 2;
     }
 
-    drawLastX = fingerX;
-    drawLastY = fingerY;
-    drawPrevFingerCount = count;
+    const x = ((clientX - rect.left - offsetX) / renderW) * w;
+    const y = ((clientY - rect.top - offsetY) / renderH) * h;
+    return { x: Math.max(0, Math.min(w, x)), y: Math.max(0, Math.min(h, y)) };
   }
 
   // =====================================================
@@ -2348,10 +2430,6 @@
     faceEffectsGrid?.classList.toggle('hidden', !isFace);
     drawToolsGrid?.classList.toggle('hidden', !isDraw);
 
-    // Show/hide drawing layer
-    drawCanvas.style.display = isDraw ? 'block' : 'none';
-    drawCursorEl.style.display = isDraw ? 'block' : 'none';
-
     if (isFace) {
       brandTitle.textContent = 'AI Face FX Studio';
       brandSubtext.textContent = 'تشخیص هوشمند چشم، گوش، لب و بینی + ۱۰ افکت زنده چهره';
@@ -2362,12 +2440,12 @@
 
     } else if (isDraw) {
       brandTitle.textContent = 'AI Air Canvas ✍️';
-      brandSubtext.textContent = 'نقاشی و نوشتن هوایی با انگشت اشاره — بدون لمس';
+      brandSubtext.textContent = 'نقاشی و نوشتن هوایی با انگشت اشاره یا موس — بدون لمس';
       primaryMetricLabel.textContent = 'انگشتان فعال';
       fingerCountDisplay.textContent = '0';
       skeletonBtnLabel.textContent = 'اسکلت دست';
       effectNameTitle.textContent = 'استودیوی نقاشی هوایی (Air Canvas)';
-      effectSubTitle.textContent = '☝️ ۱ انگشت = رسم • ✌️ ۲ انگشت = هاور • ✊ مشت = توقف';
+      effectSubTitle.textContent = '☝️ انگشت اشاره = نوشتن • ✌️ ۲ انگشت = هاور • ✊ مشت = توقف / پاک‌کن';
       fingerBadge.textContent = 'Air Draw';
       effectBanner.style.borderColor = '#00ff88';
       effectBanner.style.boxShadow = '0 0 25px rgba(0,255,136,0.4)';
@@ -2459,7 +2537,7 @@
         }
 
       } else if (currentPage === 'draw') {
-        // --- DRAW PAGE: no hand effects, only air drawing ---
+        // --- DRAW PAGE: Air Canvas & Finger Writing ---
         const lm = latestLandmarks ? latestLandmarks[0] : null;
         initDrawCanvas(w, h);
         processDrawGesture(lm, w, h);
@@ -2467,24 +2545,31 @@
         // Composite persistent drawing on top of live camera
         ctx.drawImage(drawCanvas, 0, 0);
 
-        // Show live fingertip aiming dot on output canvas
-        if (lm && drawLastX !== null) {
-          const dotColor = drawTool === 'eraser' ? '#ff5555' : drawColor;
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(drawLastX, drawLastY, Math.max(6, drawSize * 0.8), 0, Math.PI * 2);
-          ctx.fillStyle = dotColor + '44';
-          ctx.shadowColor = dotColor;
-          ctx.shadowBlur = 25;
-          ctx.fill();
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.restore();
-        }
-
         if (showSkeleton && lm) {
           drawHandSkeleton(lm, w, h);
+        }
+
+        // Show live fingertip / pen reticle on output canvas
+        if (drawLastX !== null && drawLastY !== null) {
+          const isErase = drawTool === 'eraser' || drawPrevMode === 'erasing';
+          const dotColor = isErase ? '#ff5555' : (drawPrevMode === 'hovering' ? '#ffd700' : drawColor);
+          const radius = isErase ? Math.max(16, drawSize * 1.8) : Math.max(8, drawSize * 0.9);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(drawLastX, drawLastY, radius, 0, Math.PI * 2);
+          ctx.fillStyle = isDrawing ? dotColor + '88' : dotColor + '33';
+          ctx.shadowColor = dotColor;
+          ctx.shadowBlur = isDrawing ? 24 : 12;
+          ctx.fill();
+          ctx.strokeStyle = isDrawing ? '#ffffff' : dotColor;
+          ctx.lineWidth = isDrawing ? 2.5 : 1.5;
+          ctx.stroke();
+
+          // Status label next to pen tip
+          ctx.font = 'bold 11px Outfit, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(isErase ? 'ERASE' : (isDrawing ? 'DRAW' : 'HOVER'), drawLastX + radius + 6, drawLastY + 4);
+          ctx.restore();
         }
 
         fingerCountDisplay.textContent = lm ? analyzeHandFingers(lm).count : '0';
@@ -2527,12 +2612,15 @@
 
   // --- MediaPipe Results Callback ---
   function onHandResults(results) {
-    if (currentPage !== 'hand') return;
+    if (currentPage === 'face') return;
+
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
       latestLandmarks = null;
       confidenceDisplay.textContent = '0%';
       aiStatusBadge.className = 'status-badge warning';
-      aiStatusText.textContent = 'در انتظار ورود دست به تصویر...';
+      aiStatusText.textContent = currentPage === 'draw'
+        ? 'در انتظار دست برای نوشتن در هوا...'
+        : 'در انتظار ورود دست به تصویر...';
       return;
     }
 
@@ -2544,11 +2632,19 @@
     }
 
     aiStatusBadge.className = 'status-badge';
-    aiStatusText.textContent = 'دست با موفقیت ردگیری شد';
+    aiStatusText.textContent = currentPage === 'draw'
+      ? 'انگشت ردگیری شد — آماده نقاشی ✍️'
+      : 'دست با موفقیت ردگیری شد';
 
     const primaryHand = results.multiHandLandmarks[0];
     const { count, states } = analyzeHandFingers(primaryHand);
-    updateGestureState(count, states);
+
+    if (currentPage === 'hand') {
+      updateGestureState(count, states);
+    } else if (currentPage === 'draw') {
+      currentFingerStates = states;
+      fingerCountDisplay.textContent = count;
+    }
   }
 
   function onFaceResults(results) {
@@ -2938,6 +3034,59 @@
     undoStrokeBtn?.addEventListener('click', undoLastStroke);
     clearDrawBtn?.addEventListener('click', clearDrawCanvas);
     saveDrawBtn?.addEventListener('click', saveDrawArt);
+
+    // Direct Mouse & Touch drawing support on canvas when in 'draw' page
+    const handlePointerStart = (e) => {
+      if (currentPage !== 'draw') return;
+      initDrawCanvas(canvas.width || 1280, canvas.height || 720);
+      saveDrawUndo();
+      isPointerDown = true;
+      isDrawing = true;
+      const pt = getCanvasCoordsFromEvent(e);
+      drawLastX = pt.x;
+      drawLastY = pt.y;
+      applyDrawStroke(pt.x, pt.y, pt.x + 0.5, pt.y + 0.5, false);
+      setDrawStatus(drawTool === 'eraser' ? 'erasing' : 'writing');
+    };
+
+    const handlePointerMove = (e) => {
+      if (currentPage !== 'draw' || !isPointerDown) return;
+      const pt = getCanvasCoordsFromEvent(e);
+      if (drawLastX !== null && drawLastY !== null) {
+        applyDrawStroke(drawLastX, drawLastY, pt.x, pt.y, false);
+      }
+      drawLastX = pt.x;
+      drawLastY = pt.y;
+    };
+
+    const handlePointerEnd = () => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
+      isDrawing = false;
+      drawPrevMode = 'idle';
+      setDrawStatus('idle');
+    };
+
+    canvas.addEventListener('mousedown', handlePointerStart);
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerEnd);
+    canvas.addEventListener('touchstart', (e) => {
+      if (currentPage === 'draw') {
+        e.preventDefault();
+        handlePointerStart(e);
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      if (currentPage === 'draw' && isPointerDown) {
+        e.preventDefault();
+        handlePointerMove(e);
+      }
+    }, { passive: false });
+    window.addEventListener('touchend', handlePointerEnd);
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
