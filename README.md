@@ -37,6 +37,20 @@
 
 پروژه‌ای وب، مدرن و سبک جهت تشخیص بلادرنگ (Real-Time) انگشتان دست با هوش مصنوعی و اعمال آنی افکت‌های نئونی، سایبرپانک و کیهانی روی تصویر دوربین به همراه سینت سایزر صوتی آنی.
 
+### ⌨️ Keyboard Shortcuts (میانبرهای صفحه‌کلید)
+
+| Key | Action |
+| :---: | :--- |
+| `S` | Capture a snapshot / ثبت عکس از تصویر فعلی |
+| `F` | Toggle camera fullscreen / تمام‌صفحه کردن دوربین |
+| `M` | Mirror the camera / آینه‌ای کردن تصویر |
+| `T` | Switch light/dark theme / تغییر تم روشن و تاریک |
+| `1` | Open Hand FX / ورود به افکت دست |
+| `2` | Open Face FX / ورود به افکت صورت |
+| `3` | Open Air Drawing / ورود به نقاشی هوایی |
+
+Shortcuts are disabled while typing in input fields, text areas, or other editable controls.
+
 ### 🌟 ویژگی‌های برجسته
 - **تشخیص بی‌نقص ۰ تا ۵ انگشت:** محاسبه هندسی و سه‌بعدی ۲۱ مفصل دست توسط مدل هوش مصنوعی Google MediaPipe Hands بدون خطا در زوایای مختلف.
 - **تثبیت فریم و حذف لرزش (Debounce & Hysteresis):** تعویض روان و بدون پرش افکت‌ها.
