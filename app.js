@@ -65,6 +65,25 @@
   const nextFaceFxBtn = document.getElementById('nextFaceFxBtn');
   const randomFaceFxBtn = document.getElementById('randomFaceFxBtn');
 
+  // --- Draw Page DOM refs ---
+  const switchDrawPageBtn = document.getElementById('switchDrawPageBtn');
+  const drawTelemetryHud = document.getElementById('drawTelemetryHud');
+  const drawStatusPill = document.getElementById('drawStatusPill');
+  const drawStatusText = document.getElementById('drawStatusText');
+  const hudColorSwatch = document.getElementById('hudColorSwatch');
+  const hudSizeText = document.getElementById('hudSizeText');
+  const hudStrokesCount = document.getElementById('hudStrokesCount');
+  const drawDockTitle = document.getElementById('drawDockTitle');
+  const drawToolsGrid = document.getElementById('drawToolsGrid');
+  const toolPenBtn = document.getElementById('toolPenBtn');
+  const toolEraserBtn = document.getElementById('toolEraserBtn');
+  const brushSizeBadge = document.getElementById('brushSizeBadge');
+  const drawSizeSlider = document.getElementById('drawSizeSlider');
+  const drawCustomColor = document.getElementById('drawCustomColor');
+  const undoStrokeBtn = document.getElementById('undoStrokeBtn');
+  const clearDrawBtn = document.getElementById('clearDrawBtn');
+  const saveDrawBtn = document.getElementById('saveDrawBtn');
+
   const tagEyes = document.getElementById('tag-eyes');
   const tagEars = document.getElementById('tag-ears');
   const tagLips = document.getElementById('tag-lips');
@@ -211,7 +230,7 @@
   ];
 
   // --- Application State ---
-  let currentPage = 'hand'; // 'hand' | 'face'
+  let currentPage = 'hand'; // 'hand' | 'face' | 'draw'
   let isAutoMode = true;
   let activeEffectIndex = 0;
   let activeFaceEffectIndex = 0;
@@ -2037,19 +2056,301 @@
     });
   }
 
+  // =====================================================
+  //  AIR DRAWING ENGINE — Finger Painting Studio
+  // =====================================================
+
+  // Dedicated offscreen canvas for persistent drawing
+  const drawCanvas = document.createElement('canvas');
+  drawCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+  const dCtx = drawCanvas.getContext('2d');
+
+  // Drawing State
+  let drawTool = 'pen';         // 'pen' | 'eraser'
+  let drawBrushStyle = 'neon';  // 'neon' | 'ink' | 'rainbow' | 'laser'
+  let drawColor = '#00f2fe';
+  let drawSize = 10;
+  let isDrawing = false;        // true when index finger down
+  let drawLastX = null;
+  let drawLastY = null;
+  let rainbowHue = 0;
+  let drawStrokeHistory = [];   // array of ImageData snapshots for undo
+  let drawStrokesCount = 0;
+  let drawPrevFingerCount = -1;
+  let drawPrevIndexTip = null;
+
+  // Cursor indicator dot on canvas
+  const drawCursorEl = document.createElement('div');
+  drawCursorEl.style.cssText = 'position:absolute;width:16px;height:16px;border-radius:50%;border:2px solid #00ff88;pointer-events:none;transform:translate(-50%,-50%);transition:width 0.1s,height 0.1s;z-index:20;display:none;';
+  document.getElementById('stageContainer')?.appendChild(drawCursorEl);
+  document.getElementById('stageContainer')?.appendChild(drawCanvas);
+
+  function initDrawCanvas(w, h) {
+    if (drawCanvas.width !== w || drawCanvas.height !== h) {
+      // Preserve current drawing
+      const tempImg = dCtx.getImageData(0, 0, drawCanvas.width || w, drawCanvas.height || h);
+      drawCanvas.width = w;
+      drawCanvas.height = h;
+      try { dCtx.putImageData(tempImg, 0, 0); } catch(e) {}
+    }
+  }
+
+  function saveDrawUndo() {
+    const snap = dCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+    drawStrokeHistory.push(snap);
+    if (drawStrokeHistory.length > 40) drawStrokeHistory.shift(); // max 40 undo levels
+  }
+
+  function undoLastStroke() {
+    if (drawStrokeHistory.length === 0) return;
+    const snap = drawStrokeHistory.pop();
+    dCtx.putImageData(snap, 0, 0);
+    drawStrokesCount = Math.max(0, drawStrokesCount - 1);
+    updateDrawHud();
+  }
+
+  function clearDrawCanvas() {
+    saveDrawUndo();
+    dCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    drawStrokesCount = 0;
+    drawLastX = null;
+    drawLastY = null;
+    updateDrawHud();
+  }
+
+  function saveDrawArt() {
+    // Composite: camera frame + drawing
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const eCtx = exportCanvas.getContext('2d');
+    eCtx.drawImage(canvas, 0, 0);
+    eCtx.drawImage(drawCanvas, 0, 0);
+    const link = document.createElement('a');
+    link.download = `Air_Drawing_${Date.now()}.png`;
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+    snapshotToast.classList.remove('hidden');
+    setTimeout(() => snapshotToast.classList.add('hidden'), 3000);
+  }
+
+  function updateDrawHud() {
+    if (hudColorSwatch) hudColorSwatch.style.background = drawColor;
+    if (hudSizeText) hudSizeText.textContent = `${drawSize}px`;
+    if (hudStrokesCount) hudStrokesCount.textContent = drawStrokesCount;
+    if (brushSizeBadge) brushSizeBadge.textContent = `${drawSize}px`;
+    if (drawSizeSlider) drawSizeSlider.value = drawSize;
+  }
+
+  function setDrawStatus(state) {
+    // state: 'idle' | 'hovering' | 'writing' | 'erasing'
+    if (!drawStatusPill || !drawStatusText) return;
+    const labels = {
+      idle: 'در انتظار دست...',
+      hovering: 'حالت هاور — ✌️ بدون نوشتن',
+      writing: '✍️ در حال نوشتن...',
+      erasing: '🧹 در حال پاک کردن...'
+    };
+    drawStatusPill.className = `draw-status-pill${state === 'writing' ? ' writing' : state === 'erasing' ? ' erasing' : state === 'hovering' ? ' hovering' : ''}`;
+    drawStatusText.textContent = labels[state] || labels.idle;
+  }
+
+  function applyDrawStroke(x1, y1, x2, y2) {
+    if (drawTool === 'eraser') {
+      dCtx.globalCompositeOperation = 'destination-out';
+      dCtx.lineWidth = drawSize * 3.5;
+      dCtx.lineCap = 'round';
+      dCtx.lineJoin = 'round';
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.globalCompositeOperation = 'source-over';
+      return;
+    }
+
+    dCtx.globalCompositeOperation = 'source-over';
+    dCtx.lineCap = 'round';
+    dCtx.lineJoin = 'round';
+
+    if (drawBrushStyle === 'neon') {
+      // Glow outer
+      dCtx.save();
+      dCtx.lineWidth = drawSize * 3;
+      dCtx.strokeStyle = drawColor + '55';
+      dCtx.shadowColor = drawColor;
+      dCtx.shadowBlur = 20;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      // Core
+      dCtx.lineWidth = drawSize * 0.8;
+      dCtx.strokeStyle = '#ffffff';
+      dCtx.shadowColor = drawColor;
+      dCtx.shadowBlur = 10;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.restore();
+
+    } else if (drawBrushStyle === 'ink') {
+      dCtx.save();
+      dCtx.lineWidth = drawSize;
+      dCtx.strokeStyle = drawColor;
+      dCtx.shadowBlur = 0;
+      dCtx.globalAlpha = 0.88;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.restore();
+
+    } else if (drawBrushStyle === 'rainbow') {
+      rainbowHue = (rainbowHue + 2) % 360;
+      const hsl = `hsl(${rainbowHue}, 100%, 60%)`;
+      dCtx.save();
+      dCtx.lineWidth = drawSize * 2.5;
+      dCtx.strokeStyle = hsl + '66';
+      dCtx.shadowColor = hsl;
+      dCtx.shadowBlur = 18;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.lineWidth = drawSize * 0.7;
+      dCtx.strokeStyle = '#ffffff';
+      dCtx.shadowBlur = 5;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.restore();
+
+    } else if (drawBrushStyle === 'laser') {
+      dCtx.save();
+      dCtx.lineWidth = drawSize * 0.5;
+      dCtx.strokeStyle = drawColor;
+      dCtx.shadowColor = drawColor;
+      dCtx.shadowBlur = 30;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.lineWidth = 1;
+      dCtx.strokeStyle = '#fff';
+      dCtx.shadowBlur = 5;
+      dCtx.beginPath();
+      dCtx.moveTo(x1, y1);
+      dCtx.lineTo(x2, y2);
+      dCtx.stroke();
+      dCtx.restore();
+    }
+  }
+
+  function processDrawGesture(landmarks, w, h) {
+    if (!landmarks) {
+      isDrawing = false;
+      drawLastX = null;
+      drawLastY = null;
+      drawPrevFingerCount = -1;
+      setDrawStatus('idle');
+      drawCursorEl.style.display = 'none';
+      return;
+    }
+
+    const { count } = analyzeHandFingers(landmarks);
+    const indexTip = landmarks[8];
+    const fingerX = (isMirrored ? 1 - indexTip.x : indexTip.x) * w;
+    const fingerY = indexTip.y * h;
+
+    // Map finger position to canvas element coords for CSS cursor
+    const stageEl = document.getElementById('stageContainer');
+    if (stageEl) {
+      const rect = stageEl.getBoundingClientRect();
+      const ratioX = rect.width / w;
+      const ratioY = rect.height / h;
+      drawCursorEl.style.display = 'block';
+      drawCursorEl.style.left = (fingerX * ratioX) + 'px';
+      drawCursorEl.style.top = (fingerY * ratioY) + 'px';
+      const toolColor = drawTool === 'eraser' ? '#ff5555' : drawColor;
+      const toolSize = drawTool === 'eraser' ? Math.max(16, drawSize * 2.5) : Math.max(12, drawSize);
+      drawCursorEl.style.width = toolSize + 'px';
+      drawCursorEl.style.height = toolSize + 'px';
+      drawCursorEl.style.borderColor = toolColor;
+      drawCursorEl.style.boxShadow = `0 0 10px ${toolColor}`;
+    }
+
+    if (count === 0) {
+      // Fist: lift pen
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
+      isDrawing = false;
+      drawLastX = null;
+      drawLastY = null;
+      setDrawStatus('idle');
+
+    } else if (count >= 2) {
+      // 2+ fingers: hover, no drawing
+      if (isDrawing) {
+        drawStrokesCount++;
+        updateDrawHud();
+      }
+      isDrawing = false;
+      drawLastX = null;
+      drawLastY = null;
+      setDrawStatus('hovering');
+
+    } else {
+      // Exactly 1 finger: draw!
+      if (count !== drawPrevFingerCount) {
+        // Freshly entering draw mode — save undo snapshot
+        saveDrawUndo();
+      }
+      if (isDrawing && drawLastX !== null) {
+        applyDrawStroke(drawLastX, drawLastY, fingerX, fingerY);
+      }
+      isDrawing = true;
+      setDrawStatus(drawTool === 'eraser' ? 'erasing' : 'writing');
+    }
+
+    drawLastX = fingerX;
+    drawLastY = fingerY;
+    drawPrevFingerCount = count;
+  }
+
+  // =====================================================
+  // END AIR DRAWING ENGINE
+  // =====================================================
+
   function switchPage(page) {
-    currentPage = page === 'face' ? 'face' : 'hand';
+    currentPage = (page === 'face' || page === 'draw') ? page : 'hand';
     const isFace = currentPage === 'face';
+    const isDraw = currentPage === 'draw';
+    const isHand = currentPage === 'hand';
 
-    switchHandPageBtn?.classList.toggle('active', !isFace);
+    switchHandPageBtn?.classList.toggle('active', isHand);
     switchFacePageBtn?.classList.toggle('active', isFace);
+    switchDrawPageBtn?.classList.toggle('active', isDraw);
 
-    gestureIndicator?.classList.toggle('hidden', isFace);
+    gestureIndicator?.classList.toggle('hidden', !isHand);
     faceTelemetryHud?.classList.toggle('hidden', !isFace);
-    handDockTitle?.classList.toggle('hidden', isFace);
+    drawTelemetryHud?.classList.toggle('hidden', !isDraw);
+
+    handDockTitle?.classList.toggle('hidden', !isHand);
     faceDockTitle?.classList.toggle('hidden', !isFace);
-    handEffectsGrid?.classList.toggle('hidden', isFace);
+    drawDockTitle?.classList.toggle('hidden', !isDraw);
+
+    handEffectsGrid?.classList.toggle('hidden', !isHand);
     faceEffectsGrid?.classList.toggle('hidden', !isFace);
+    drawToolsGrid?.classList.toggle('hidden', !isDraw);
+
+    // Show/hide drawing layer
+    drawCanvas.style.display = isDraw ? 'block' : 'none';
+    drawCursorEl.style.display = isDraw ? 'block' : 'none';
 
     if (isFace) {
       brandTitle.textContent = 'AI Face FX Studio';
@@ -2058,6 +2359,22 @@
       fingerCountDisplay.textContent = latestFaceLandmarks ? '468' : '0';
       skeletonBtnLabel.textContent = 'نقاط کلیدی صورت';
       selectFaceEffect(activeFaceEffectIndex);
+
+    } else if (isDraw) {
+      brandTitle.textContent = 'AI Air Canvas ✍️';
+      brandSubtext.textContent = 'نقاشی و نوشتن هوایی با انگشت اشاره — بدون لمس';
+      primaryMetricLabel.textContent = 'انگشتان فعال';
+      fingerCountDisplay.textContent = '0';
+      skeletonBtnLabel.textContent = 'اسکلت دست';
+      effectNameTitle.textContent = 'استودیوی نقاشی هوایی (Air Canvas)';
+      effectSubTitle.textContent = '☝️ ۱ انگشت = رسم • ✌️ ۲ انگشت = هاور • ✊ مشت = توقف';
+      fingerBadge.textContent = 'Air Draw';
+      effectBanner.style.borderColor = '#00ff88';
+      effectBanner.style.boxShadow = '0 0 25px rgba(0,255,136,0.4)';
+      vhsOverlay.classList.add('hidden');
+      updateDrawHud();
+      setDrawStatus('idle');
+
     } else {
       brandTitle.textContent = 'AI Finger FX Vision';
       brandSubtext.textContent = 'شناسایی هوشمند حرکات دست و افکت‌های آنی';
@@ -2082,6 +2399,7 @@
         isAiInferring = false;
       }
     } else {
+      // Both 'hand' and 'draw' pages use Hands model
       if (!mediaPipeHands || !isModelReady) return;
       isAiInferring = true;
       try {
@@ -2114,7 +2432,7 @@
       ctx.drawImage(video, 0, 0, w, h);
       ctx.restore();
 
-      // 2. Render Active Page Effect (Hand FX or Face FX)
+      // 2. Render Active Page Effect
       if (currentPage === 'face') {
         const flm = latestFaceLandmarks ? latestFaceLandmarks[0] : null;
         if (flm) {
@@ -2139,7 +2457,40 @@
             drawFaceKeyPositionsOverlay(flm, fm, w, h);
           }
         }
+
+      } else if (currentPage === 'draw') {
+        // --- DRAW PAGE: no hand effects, only air drawing ---
+        const lm = latestLandmarks ? latestLandmarks[0] : null;
+        initDrawCanvas(w, h);
+        processDrawGesture(lm, w, h);
+
+        // Composite persistent drawing on top of live camera
+        ctx.drawImage(drawCanvas, 0, 0);
+
+        // Show live fingertip aiming dot on output canvas
+        if (lm && drawLastX !== null) {
+          const dotColor = drawTool === 'eraser' ? '#ff5555' : drawColor;
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(drawLastX, drawLastY, Math.max(6, drawSize * 0.8), 0, Math.PI * 2);
+          ctx.fillStyle = dotColor + '44';
+          ctx.shadowColor = dotColor;
+          ctx.shadowBlur = 25;
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (showSkeleton && lm) {
+          drawHandSkeleton(lm, w, h);
+        }
+
+        fingerCountDisplay.textContent = lm ? analyzeHandFingers(lm).count : '0';
+
       } else {
+        // --- HAND PAGE ---
         const lm = latestLandmarks ? latestLandmarks[0] : null;
         switch (activeEffectIndex) {
           case 0: renderMatrixEffect(w, h, lm); break;
@@ -2151,7 +2502,7 @@
           default: renderMatrixEffect(w, h, lm);
         }
 
-        // 3. Render Hand Skeleton
+        // Render Hand Skeleton
         if (showSkeleton && lm) {
           drawHandSkeleton(lm, w, h);
         }
@@ -2519,6 +2870,85 @@
       if (nextIdx === activeFaceEffectIndex) nextIdx = (nextIdx + 1) % FACE_EFFECTS.length;
       selectFaceEffect(nextIdx);
       playGestureSound(5);
+    });
+
+    // Draw Page button
+    switchDrawPageBtn?.addEventListener('click', () => {
+      initAudio();
+      switchPage('draw');
+    });
+
+    // Draw Toolbar: Pen / Eraser
+    toolPenBtn?.addEventListener('click', () => {
+      drawTool = 'pen';
+      toolPenBtn.classList.add('active');
+      toolEraserBtn?.classList.remove('active');
+    });
+    toolEraserBtn?.addEventListener('click', () => {
+      drawTool = 'eraser';
+      toolEraserBtn.classList.add('active');
+      toolPenBtn?.classList.remove('active');
+    });
+
+    // Brush Styles
+    document.querySelectorAll('.style-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        drawBrushStyle = btn.dataset.style;
+        document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Color Circles
+    document.querySelectorAll('.color-circle').forEach(el => {
+      el.addEventListener('click', () => {
+        drawColor = el.dataset.color;
+        document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        if (drawCustomColor) drawCustomColor.value = drawColor;
+        updateDrawHud();
+      });
+    });
+
+    // Custom color picker
+    drawCustomColor?.addEventListener('input', (e) => {
+      drawColor = e.target.value;
+      document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('active'));
+      updateDrawHud();
+    });
+
+    // Size presets
+    document.querySelectorAll('.size-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        drawSize = parseInt(btn.dataset.size, 10);
+        document.querySelectorAll('.size-preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateDrawHud();
+      });
+    });
+
+    // Size slider
+    drawSizeSlider?.addEventListener('input', (e) => {
+      drawSize = parseInt(e.target.value, 10);
+      document.querySelectorAll('.size-preset-btn').forEach(b => b.classList.remove('active'));
+      updateDrawHud();
+    });
+
+    // Undo / Clear / Save
+    undoStrokeBtn?.addEventListener('click', undoLastStroke);
+    clearDrawBtn?.addEventListener('click', clearDrawCanvas);
+    saveDrawBtn?.addEventListener('click', saveDrawArt);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (currentPage !== 'draw') return;
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undoLastStroke();
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (document.activeElement === document.body) clearDrawCanvas();
+      }
     });
 
     window.addEventListener('click', initAudio, { once: true });

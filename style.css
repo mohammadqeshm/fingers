@@ -994,6 +994,17 @@ body[data-theme='light'] {
   box-shadow: 0 0 20px rgba(255, 42, 133, 0.45);
 }
 
+.page-nav-btn.draw-cta:not(.active) {
+  border-color: rgba(0, 255, 136, 0.35);
+  color: #7affbf;
+}
+
+.page-nav-btn.draw-cta.active {
+  background: linear-gradient(135deg, #00ff88, #00f2fe);
+  color: #050814;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.45);
+}
+
 /* ---------------- Face Telemetry HUD ---------------- */
 .face-telemetry-hud {
   position: absolute;
@@ -1117,7 +1128,323 @@ body[data-theme='light'] {
   color: var(--text-muted);
 }
 
+/* ---------------- Air Drawing & Finger Writing Studio ---------------- */
+.draw-quick-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.danger-tab {
+  border-color: rgba(255, 60, 60, 0.4) !important;
+  color: #ff7575 !important;
+}
+
+.danger-tab:hover {
+  background: rgba(255, 60, 60, 0.2) !important;
+  border-color: #ff3333 !important;
+  color: #fff !important;
+}
+
+.success-tab {
+  border-color: rgba(0, 255, 136, 0.4) !important;
+  color: #00ff88 !important;
+}
+
+.success-tab:hover {
+  background: rgba(0, 255, 136, 0.2) !important;
+  border-color: #00ff88 !important;
+  color: #fff !important;
+}
+
+/* Draw Telemetry HUD */
+.draw-telemetry-hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(10, 14, 25, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 250px;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.15);
+}
+
+.draw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.draw-status-pill.writing {
+  background: rgba(0, 255, 136, 0.2);
+  border: 1px solid rgba(0, 255, 136, 0.5);
+  color: #b3ffce;
+}
+
+.draw-status-pill.hovering {
+  background: rgba(0, 242, 254, 0.15);
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  color: #a8f5ff;
+}
+
+.draw-status-pill.erasing {
+  background: rgba(255, 60, 60, 0.2);
+  border: 1px solid rgba(255, 60, 60, 0.5);
+  color: #ffb3b3;
+}
+
+.draw-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  animation: blinkDot 1s infinite alternate;
+}
+
+.draw-status-pill.writing .draw-status-dot {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+
+.draw-status-pill.erasing .draw-status-dot {
+  background: #ff3333;
+  box-shadow: 0 0 8px #ff3333;
+}
+
+.draw-hud-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.hud-color-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #00f2fe;
+  vertical-align: middle;
+  border: 1px solid #fff;
+}
+
+/* ---------------- Draw Tools Grid ---------------- */
+.draw-tools-grid {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr auto;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.draw-panel-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.panel-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.size-badge {
+  font-family: var(--font-en);
+  font-size: 0.76rem;
+  color: var(--accent-green);
+  background: rgba(0, 255, 136, 0.15);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+}
+
+/* Tool buttons (Pen / Eraser) */
+.tool-buttons-row,
+.brush-styles-row {
+  display: flex;
+  gap: 6px;
+}
+
+.tool-btn,
+.style-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: var(--font-fa);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.tool-btn:hover,
+.style-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.tool-btn.active,
+.style-btn.active {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 242, 254, 0.2));
+  border-color: var(--accent-green);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.3);
+}
+
+/* Color Palette Row */
+.color-palette-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.color-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.color-circle:hover {
+  transform: scale(1.2);
+}
+
+.color-circle.active {
+  border-color: #ffffff;
+  transform: scale(1.25);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.custom-color-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-color-label input[type="color"] {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.custom-color-icon {
+  font-size: 0.8rem;
+}
+
+/* Size controls */
+.size-controls-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.size-presets {
+  display: flex;
+  gap: 6px;
+}
+
+.size-preset-btn {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-fa);
+  transition: all 0.2s ease;
+}
+
+.size-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.size-preset-btn.active {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #060914;
+  font-weight: 700;
+}
+
+.draw-slider {
+  width: 100%;
+  accent-color: var(--accent-green);
+  cursor: pointer;
+}
+
+/* Gesture Guide Section */
+.gesture-guide-section {
+  min-width: 220px;
+}
+
+.guide-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.guide-chip {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border-right: 2px solid var(--accent-green);
+}
+
+.guide-chip strong {
+  color: #fff;
+}
+
 @media (max-width: 1200px) {
+  .draw-tools-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .effects-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -1137,6 +1464,8 @@ body[data-theme='light'] {
   .page-nav-btn {
     flex: 1;
     justify-content: center;
+    font-size: 0.78rem;
+    padding: 6px 10px;
   }
   .metrics-hud {
     order: 3;
@@ -1146,6 +1475,9 @@ body[data-theme='light'] {
   .effects-grid,
   .face-effects-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .draw-tools-grid {
+    grid-template-columns: 1fr;
   }
   .main-viewport {
     padding: 12px;

@@ -59,6 +59,15 @@
           </svg>
           <span>افکت صورت</span>
         </button>
+        <button id="switchDrawPageBtn" class="page-nav-btn draw-cta">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+            <path d="M2 2l7.586 7.586"></path>
+            <circle cx="11" cy="11" r="2"></circle>
+          </svg>
+          <span>نوشتن و نقاشی ✍️</span>
+        </button>
       </div>
 
       <!-- Quick Metrics HUD -->
@@ -186,6 +195,20 @@
             </div>
           </div>
 
+          <!-- Air Draw Telemetry HUD (Live Pen & Gesture State) -->
+          <div class="draw-telemetry-hud hidden" id="drawTelemetryHud">
+            <div class="telemetry-header">وضعیت قلم هوایی (Air Canvas)</div>
+            <div class="draw-status-pill" id="drawStatusPill">
+              <span class="draw-status-dot"></span>
+              <span id="drawStatusText">در حال شناسایی انگشت...</span>
+            </div>
+            <div class="draw-hud-info">
+              <span>رنگ: <span class="hud-color-swatch" id="hudColorSwatch"></span></span>
+              <span>ضخامت: <strong id="hudSizeText">10px</strong></span>
+              <span>خطوط: <strong id="hudStrokesCount">0</strong></span>
+            </div>
+          </div>
+
           <!-- VHS Specific Overlay (Active in Mode 4) -->
           <div class="vhs-overlay hidden" id="vhsOverlay">
             <div class="vhs-rec"><span class="rec-dot"></span> REC</div>
@@ -254,6 +277,14 @@
               <button id="prevFaceFxBtn" class="mode-tab">قبلی</button>
               <button id="randomFaceFxBtn" class="mode-tab active">افکت شانسی 🎲</button>
               <button id="nextFaceFxBtn" class="mode-tab">بعدی</button>
+            </div>
+          </div>
+          <div class="dock-title hidden" id="drawDockTitle">
+            <span>استودیوی نوشتن با انگشت و نقاشی هوایی (Air Canvas):</span>
+            <div class="draw-quick-actions">
+              <button id="undoStrokeBtn" class="mode-tab" title="لغو آخرین خط (Ctrl+Z)">↩️ واگرد (Undo)</button>
+              <button id="clearDrawBtn" class="mode-tab danger-tab" title="پاک کردن کل صفحه">🗑️ پاک کردن همه</button>
+              <button id="saveDrawBtn" class="mode-tab success-tab" title="ذخیره نقاشی به عنوان تصویر">💾 ذخیره اثر</button>
             </div>
           </div>
           <div class="camera-select-wrap">
@@ -428,6 +459,89 @@
             </div>
             <div class="card-title">آواتار کیهانی و چشم سوم</div>
             <div class="card-desc">صورت فلکی ستاره‌ای روی اجزای چهره، چشم سوم و اشک‌های نورانی</div>
+          </div>
+
+        </div>
+
+        <!-- Air Drawing & Writing Studio Dock -->
+        <div class="draw-tools-grid hidden" id="drawToolsGrid">
+          
+          <!-- Tool & Mode Selection -->
+          <div class="draw-panel-section">
+            <div class="panel-section-title">ابزار فعال</div>
+            <div class="tool-buttons-row">
+              <button class="tool-btn active" id="toolPenBtn" data-tool="pen">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                </svg>
+                <span>قلم هوایی ✍️</span>
+              </button>
+              <button class="tool-btn" id="toolEraserBtn" data-tool="eraser">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L17 16"></path>
+                  <path d="M18 12L10 20"></path>
+                </svg>
+                <span>پاک‌کن 🧹</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Brush Style Selector -->
+          <div class="draw-panel-section">
+            <div class="panel-section-title">جنس قلم</div>
+            <div class="brush-styles-row">
+              <button class="style-btn active" data-style="neon" title="نئون درخشان">نئون 🌟</button>
+              <button class="style-btn" data-style="ink" title="روان‌نویس دیجیتال">جوهر 🖋️</button>
+              <button class="style-btn" data-style="rainbow" title="رنگین‌کمانی چندرنگ">رنگین‌کمان 🌈</button>
+              <button class="style-btn" data-style="laser" title="پرتو لیزری براق">لیزر ⚡</button>
+            </div>
+          </div>
+
+          <!-- Color Palette -->
+          <div class="draw-panel-section">
+            <div class="panel-section-title">انتخاب رنگ</div>
+            <div class="color-palette-row">
+              <span class="color-circle active" data-color="#00f2fe" style="background:#00f2fe;" title="فیروزه‌ای نئون"></span>
+              <span class="color-circle" data-color="#ff2a85" style="background:#ff2a85;" title="صورتی نئون"></span>
+              <span class="color-circle" data-color="#00ff88" style="background:#00ff88;" title="سبز فسفری"></span>
+              <span class="color-circle" data-color="#ffd700" style="background:#ffd700;" title="زرد طلایی"></span>
+              <span class="color-circle" data-color="#ff3300" style="background:#ff3300;" title="قرمز آتشین"></span>
+              <span class="color-circle" data-color="#a855f7" style="background:#a855f7;" title="بنفش رویایی"></span>
+              <span class="color-circle" data-color="#ffffff" style="background:#ffffff;" title="سفید برفی"></span>
+              <span class="color-circle" data-color="#111111" style="background:#111111; border:1px solid #555;" title="مشکی عمیق"></span>
+              <label class="custom-color-label" title="انتخاب رنگ دلخواه">
+                <input type="color" id="drawCustomColor" value="#00f2fe">
+                <span class="custom-color-icon">🎨</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Size / Thickness Slider & Presets -->
+          <div class="draw-panel-section">
+            <div class="panel-section-title">
+              <span>ضخامت قلم</span>
+              <span class="size-badge" id="brushSizeBadge">10px</span>
+            </div>
+            <div class="size-controls-row">
+              <div class="size-presets">
+                <button class="size-preset-btn" data-size="4">باریک</button>
+                <button class="size-preset-btn active" data-size="10">متوسط</button>
+                <button class="size-preset-btn" data-size="20">ضخیم</button>
+                <button class="size-preset-btn" data-size="36">ماژیک</button>
+              </div>
+              <input type="range" id="drawSizeSlider" min="2" max="50" value="10" class="draw-slider">
+            </div>
+          </div>
+
+          <!-- Gesture Guide Info -->
+          <div class="draw-panel-section gesture-guide-section">
+            <div class="panel-section-title">راهنمای ژست‌های نوشتن در هوا:</div>
+            <div class="guide-chips">
+              <span class="guide-chip">☝️ <strong>۱ انگشت باز:</strong> نوشتن و کشیدن خط</span>
+              <span class="guide-chip">✌️ <strong>۲ انگشت باز:</strong> جابجایی آزاد بدون نوشتن (Hover)</span>
+              <span class="guide-chip">✊ <strong>مشت بسته:</strong> توقف قلم یا پاک‌کن سریع</span>
+            </div>
           </div>
 
         </div>
