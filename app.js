@@ -2906,6 +2906,33 @@
 
     snapshotBtn.addEventListener('click', takeSnapshot);
 
+    // Global keyboard shortcuts (ignored while typing in form controls).
+    document.addEventListener('keydown', (e) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const target = e.target;
+      if (target instanceof HTMLElement && (
+        target.isContentEditable ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+      )) return;
+
+      const key = e.key.toLowerCase();
+      const shortcuts = {
+        s: snapshotBtn,
+        f: fullscreenBtn,
+        m: flipCameraBtn,
+        t: themeToggleBtn,
+        '1': switchHandPageBtn,
+        '2': switchFacePageBtn,
+        '3': switchDrawPageBtn
+      };
+      const button = shortcuts[key];
+      if (!button || button.disabled || button.classList.contains('hidden')) return;
+
+      e.preventDefault();
+      button.click();
+    });
+
     modeAutoBtn.addEventListener('click', () => {
       isAutoMode = true;
       modeAutoBtn.classList.add('active');
